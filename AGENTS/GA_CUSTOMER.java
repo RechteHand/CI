@@ -20,7 +20,11 @@ public class GA_CUSTOMER {
 	public static void main(String[] args) {
 
 		try {
-			CustomerAgent ag = new CustomerAgent(new File("/Users/max/Documents/CI/AGENTS/daten3ACustomer_200_10.txt"));
+			File file = new File("CI/AGENTS/daten3ACustomer_200_10.txt");
+			if (!file.exists()) {
+				file = new File("daten3ACustomer_200_10.txt");
+			}
+			CustomerAgent ag = new CustomerAgent(file);
 			int n = ag.getContractSize();
 
 			// ── Grid-Search Definitionen ──
