@@ -116,6 +116,22 @@ public class CustomerAgent extends Agent {
 		return (weightSum);
 	}
 
+	// Gibt Jobs sortiert nach absteigender Gesamtbearbeitungszeit zurück (für NEH-Initialisierung)
+	public int[] getJobsSortedByTotalTime() {
+		int n = timeMatrix.length;
+		Integer[] indices = new Integer[n];
+		for (int i = 0; i < n; i++) indices[i] = i;
+		java.util.Arrays.sort(indices, (a, b) -> {
+			int sumA = 0, sumB = 0;
+			for (int t : timeMatrix[a]) sumA += t;
+			for (int t : timeMatrix[b]) sumB += t;
+			return sumB - sumA; // absteigend
+		});
+		int[] result = new int[n];
+		for (int i = 0; i < n; i++) result[i] = indices[i];
+		return result;
+	}
+
 	public void initContract(){
 		int contractSize = timeMatrix.length;
 		int[] contract = new int[contractSize];
