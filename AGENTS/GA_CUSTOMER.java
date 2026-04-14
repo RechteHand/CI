@@ -6,7 +6,7 @@ public class GA_CUSTOMER {
 
 	// ── Testsieger GA-Parameter (jetzt dynamisch einstellbar) ────────────────
 	static int POPULATION_SIZE = 70;
-	static int MAX_GENERATIONS = 100000;
+	static int MAX_GENERATIONS = 1000000;
 	static double MUTATION_RATE = 0.60;
 	static int TOURNAMENT_SIZE = 4;
 	static int ELITISM_COUNT = 3;
@@ -28,8 +28,8 @@ public class GA_CUSTOMER {
 			int n = ag.getContractSize();
 
 			// ── Grid-Search Definitionen ──
-			int[] popSizes = { 50, 80 };
-			double[] mutRates = { 0.40, 0.90 };
+			int[] popSizes = { 40, 100 };
+			double[] mutRates = { 0.20, 0.90 };
 			int[] stagLimits = { 500, 2000 };
 
 			int runsPerConfig = 2; // Jeweils Durchschnitt aus mehreren Läufen berechnen
@@ -42,6 +42,7 @@ public class GA_CUSTOMER {
 
 			int bestConfigFit = Integer.MAX_VALUE;
 			String bestConfigDesc = "";
+			int[] absoluteBestSequence = null;
 
 			for (int pop : popSizes) {
 				for (double mut : mutRates) {
@@ -62,13 +63,17 @@ public class GA_CUSTOMER {
 							System.out.print("   -> Run " + r + "/" + runsPerConfig + " läuft... ");
 							long runStart = System.currentTimeMillis();
 
-							int runResult = runGA(ag, n);
+							GAResult runResult = runGA(ag, n);
 
 							long runTime = (System.currentTimeMillis() - runStart) / 1000;
-							System.out.println("Ergebnis: " + runResult + " (" + runTime + "s)");
+							System.out.println("Ergebnis: " + runResult.fitness + " (" + runTime + "s)");
 
-							if (runResult < bestFitForConfig) {
-								bestFitForConfig = runResult;
+							if (runResult.fitness < bestFitForConfig) {
+								bestFitForConfig = runResult.fitness;
+							}
+
+							if (runResult.fitness < bestConfigFit) {
+								absoluteBestSequence = runResult.sequence.clone();
 							}
 						}
 
@@ -88,20 +93,82 @@ public class GA_CUSTOMER {
 			System.out.println("   Optimum / Beste Fitness: " + bestConfigFit);
 			System.out.println("   (Diese Werte jetzt als Standard festlegen für 100k Runs!)");
 			System.out.println("════════════════════════════════════════════════════════════════════");
+			if (absoluteBestSequence != null) {
+				System.out.println("🌟 Bester gefundener Vertrag (Reihenfolge):");
+				System.out.println(java.util.Arrays.toString(absoluteBestSequence));
+			}
 		} catch (FileNotFoundException e) {
 			System.out.println(e.getMessage());
 		}
 	}
 
-	public static int runGA(CustomerAgent ag, int n) {
-		// ── 1. Population initialisieren
+	static class GAResult {
+		int fitness;
+		int[] sequence;
+
+		GAResult(int f, int[] s) {
+			this.fitness = f;
+			this.sequence = s;
+		}
+	}
+
+	public static GAResult runGA(CustomerAgent ag, int n) {
+		// ── 1. Population initialisieren mit NEH Heuristik
 		int[][] population = new int[POPULATION_SIZE][n];
-		for (int i = 0; i < POPULATION_SIZE; i++) {
+		int[] pureNEH = ag.createNEHContract();
+		population[0] = pureNEH.clone();
+
+		int seedCount = (int) (POPULATION_SIZE * 0.10); // 10% seeded
+		for (int i = 1; i < seedCount; i++) {
+			int[] mutatedNEH = pureNEH.clone();
+			int numMutations = 1 + rng.nextInt(3);
+			for (int m = 0; m < numMutations; m++)
+				mutate(mutatedNEH);
+			population[i] = mutatedNEH;
+		}
+		for (int i = seedCount; i < POPULATION_SIZE; i++) {
 			population[i] = randomPermutation(n);
 		}
 
-		int[] bestEver = null;
-		int bestEverFit = Integer.MAX_VALUE;
+		// ── ASYNCHRONE LOKALE SUCHE (Pathfinder Thread) ──
+		java.util.concurrent.atomic.AtomicReference<int[]> globalBestContract = new java.util.concurrent.atomic.AtomicReference<>(
+				pureNEH.clone());
+		java.util.concurrent.atomic.AtomicInteger globalBestFit = new java.util.concurrent.atomic.AtomicInteger(
+				ag.fitness(pureNEH));
+		java.util.concurrent.atomic.AtomicBoolean gaRunning = new java.util.concurrent.atomic.AtomicBoolean(true);
+
+		Thread pathfinder = new Thread(() -> {
+			int threadLocalBestFit = globalBestFit.get();
+			int[] currentBest = globalBestContract.get().clone();
+			double T_base = (double) ag.getBaseProcessingTimeSum() / (10.0 * n * ag.getNumMachines()) * 0.4;
+
+			while (gaRunning.get()) {
+				// Resync mit GA, falls die Evolution ein noch besseres Peak gefunden hat
+				int currentGlobalFit = globalBestFit.get();
+				if (currentGlobalFit < threadLocalBestFit) {
+					threadLocalBestFit = currentGlobalFit;
+					currentBest = globalBestContract.get().clone();
+				}
+
+				int newFit = iteratedGreedySearch(currentBest, ag, threadLocalBestFit, T_base);
+
+				if (newFit < threadLocalBestFit) {
+					threadLocalBestFit = newFit;
+					if (newFit < globalBestFit.get()) {
+						globalBestFit.set(newFit);
+						globalBestContract.set(currentBest.clone());
+					}
+				} else {
+					// SA Akzeptanz. Eine temporäre Verschlechterung wurde beibehalten
+					threadLocalBestFit = newFit;
+				}
+			}
+		});
+		pathfinder.setDaemon(true);
+		pathfinder.start();
+
+		int[] bestEver = pureNEH.clone();
+		int bestEverFit = globalBestFit.get();
 		int gensSinceImprovement = 0;
 		int restartCount = 0;
 
@@ -120,41 +187,24 @@ public class GA_CUSTOMER {
 				}
 			}
 
-			// Global bestes auswerten
+			// Global bestes / Pathfinder auswerten
+			int currentPathfinderFit = globalBestFit.get();
+			if (currentPathfinderFit < bestEverFit) {
+				bestEverFit = currentPathfinderFit;
+				bestEver = globalBestContract.get().clone();
+				gensSinceImprovement = 0;
+			}
+
 			if (fitnessValues[bestIdx] < bestEverFit) {
 				bestEverFit = fitnessValues[bestIdx];
 				bestEver = population[bestIdx].clone();
-				gensSinceImprovement = 0;
 
-				// ── Starke lokale Suche (Hill-Climbing) auf neuen Champion anwenden ──
-				int lsResult = localSearch(bestEver, ag, bestEverFit);
-				if (lsResult < bestEverFit) {
-					bestEverFit = lsResult;
-				}
+				// Push neuen Rekord an den Pathfinder-Thread
+				globalBestFit.set(bestEverFit);
+				globalBestContract.set(bestEver.clone());
+				gensSinceImprovement = 0;
 			} else {
 				gensSinceImprovement++;
-			}
-
-			// ── NEU: Periodischer Memetic Pulse (VNS Lamarckian Learning) ──
-			// Wir "ziehen" den besten der aktuellen Generation alle 250 Generationen
-			// ins tiefstmögliche Tal und lassen ihn das gelernte DNA-Wissen zurückgeben!
-			if (gen > 0 && gen % 250 == 0) {
-				int[] localChamp = population[bestIdx].clone();
-				int lsResult = localSearch(localChamp, ag, fitnessValues[bestIdx]);
-
-				if (lsResult < fitnessValues[bestIdx]) {
-					// Lamarck'sche Evolution: Der Champion darf sein in der Lebenszeit
-					// angeeignetes Wissen in den Genpool weitergeben!
-					population[bestIdx] = localChamp;
-					fitnessValues[bestIdx] = lsResult;
-
-					// Prüfen, ob er durch das Training den Weltrekord geknackt hat
-					if (lsResult < bestEverFit) {
-						bestEverFit = lsResult;
-						bestEver = localChamp.clone();
-						gensSinceImprovement = 0;
-					}
-				}
 			}
 
 			// ── Stagnationserkennung + Restarts ──
@@ -215,90 +265,101 @@ public class GA_CUSTOMER {
 			population = newPopulation;
 		}
 
-		return bestEverFit;
+		gaRunning.set(false);
+		try {
+			pathfinder.join(100);
+		} catch (InterruptedException e) {
+		}
+
+		return new GAResult(bestEverFit, bestEver);
 	}
 
-	// ── Lokale Suche: VNS (Variable Neighborhood Search) ──
-	static int localSearch(int[] individual, CustomerAgent ag, int currentBestFit) {
-		int n = individual.length;
-		int currentFit = currentBestFit;
-		boolean improved = true;
+	// ── Iterated Greedy Local Search (Ruin & Recreate) mit Simulated Annealing ──
+	static int iteratedGreedySearch(int[] currentBest, CustomerAgent ag, int currentFit, double temperature) {
+		int n = currentBest.length;
+		int d = 4; // Zerstörungs-Faktor (Anzahl der zu verschiebenden Jobs)
+		if (n <= d)
+			return currentFit;
 
-		// Wiederhole den Scan, solange noch Verbesserungen gefunden werden
-		while (improved) {
-			improved = false;
+		// 1. Destruction (Ruin)
+		int[] partial = new int[n - d];
+		int[] removed = new int[d];
+		boolean[] toRemove = new boolean[n];
 
-			// ── NEIGHBORHOOD 1: FULL INSERT (Maximale Zerstörungskraft) ──
-			for (int from = 0; from < n; from++) {
-				for (int to = 0; to < n; to++) {
-					if (from == to)
-						continue;
-
-					int gene = individual[from];
-					if (from < to) {
-						for (int i = from; i < to; i++)
-							individual[i] = individual[i + 1];
-					} else {
-						for (int i = from; i > to; i--)
-							individual[i] = individual[i - 1];
-					}
-					individual[to] = gene;
-
-					int newFit = ag.fitness(individual);
-
-					if (newFit < currentFit) {
-						currentFit = newFit;
-						improved = true;
-						break;
-					} else {
-						// Undo
-						int geneToRestore = individual[to];
-						if (from < to) {
-							for (int i = to; i > from; i--)
-								individual[i] = individual[i - 1];
-						} else {
-							for (int i = to; i < from; i++)
-								individual[i] = individual[i + 1];
-						}
-						individual[from] = geneToRestore;
-					}
-				}
-				if (improved)
-					break;
+		int count = 0;
+		while (count < d) {
+			int r = rng.nextInt(n);
+			if (!toRemove[r]) {
+				toRemove[r] = true;
+				removed[count++] = currentBest[r];
 			}
-
-			// ── NEIGHBORHOOD 2: FULL SWAP (Ausbruchs-Nachbarschaft) ──
-			// Feuert nur, wenn Insert völlig in einer Sackgasse steckt (improved == false)
-			if (!improved) {
-				for (int i = 0; i < n - 1 && !improved; i++) {
-					for (int j = i + 1; j < n; j++) {
-
-						int tmp = individual[i];
-						individual[i] = individual[j];
-						individual[j] = tmp;
-
-						int newFit = ag.fitness(individual);
-
-						if (newFit < currentFit) {
-							currentFit = newFit;
-							improved = true;
-							break;
-						} else {
-							// Rücktausch (Undo)
-							tmp = individual[i];
-							individual[i] = individual[j];
-							individual[j] = tmp;
-						}
-					}
-				}
-			}
-			// Wenn der Swap erfolgreich war, setzt es 'improved = true', das while()
-			// springt wieder
-			// an den Start und schöpft wieder ZUERST das feingranulare Insert-Modell
-			// komplett aus!
-			// Das ist das exakte Design eines echten VNS (Variable Neighborhood Search).
 		}
-		return currentFit;
+
+		int pIdx = 0;
+		for (int i = 0; i < n; i++) {
+			if (!toRemove[i])
+				partial[pIdx++] = currentBest[i];
+		}
+
+		// 2. Construction (Recreate via NEH-Prinzip)
+		int[] currentContract = partial;
+
+		for (int i = 0; i < d; i++) {
+			int jobToInsert = removed[i];
+			int bestPos = -1;
+			int bestFit = Integer.MAX_VALUE;
+
+			int currentLength = currentContract.length;
+			int[] bestContract = new int[currentLength + 1];
+
+			for (int pos = 0; pos <= currentLength; pos++) {
+				int[] testContract = new int[currentLength + 1];
+				for (int j = 0; j < pos; j++)
+					testContract[j] = currentContract[j];
+				testContract[pos] = jobToInsert;
+				for (int j = pos; j < currentLength; j++)
+					testContract[j + 1] = currentContract[j];
+
+				// Array-Padding zum Simulieren des End-Vertrags (damit ag.fitness funktioniert)
+				int[] fullContract = new int[n];
+				for (int j = 0; j < testContract.length; j++)
+					fullContract[j] = testContract[j];
+				int remIdx = testContract.length;
+				for (int k = i + 1; k < d; k++) {
+					fullContract[remIdx++] = removed[k];
+				}
+
+				int fit = ag.fitness(fullContract);
+				if (fit < bestFit) {
+					bestFit = fit;
+					bestPos = pos;
+					for (int k = 0; k < testContract.length; k++)
+						bestContract[k] = testContract[k];
+				}
+			}
+			currentContract = bestContract;
+		}
+
+		int newFit = ag.fitness(currentContract);
+
+		// 3. Acceptance Criterion (Simulated Annealing)
+		if (newFit < currentFit) {
+			// Besser -> direkt annehmen
+			for (int i = 0; i < n; i++)
+				currentBest[i] = currentContract[i];
+			return newFit;
+		} else {
+			// Schlechter -> Mit SA-Wahrscheinlichkeit annehmen
+			double prob = Math.exp(-(newFit - currentFit) / temperature);
+			if (rng.nextDouble() < prob) {
+				// Akzeptiert Verschlechterung für Ausbruch aus lokalem Optimum!
+				for (int i = 0; i < n; i++)
+					currentBest[i] = currentContract[i];
+				return newFit;
+			}
+		}
+
+		return currentFit; // Abgelehnt
 	}
 
 	// ── Gewichtete Mutation: Insert ist King bei asymmetrischen Problemen!

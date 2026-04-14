@@ -6,6 +6,7 @@ public class CustomerAgent extends Agent {
 
 	private int[][] timeMatrix;
 	private int[][] delayMatrix;// wird anhand der timeMatrix berechnet
+	private int baseProcessingTimeSum;
 	int[]   localContract;
 	
 	
@@ -19,6 +20,7 @@ public class CustomerAgent extends Agent {
 			for (int j = 0; j < timeMatrix[i].length; j++) {
 				int x = scanner.nextInt();
 				timeMatrix[i][j] = x;
+				baseProcessingTimeSum += x;
 			}
 		}
 		calculateDelay(timeMatrix.length);		
@@ -100,20 +102,61 @@ public class CustomerAgent extends Agent {
 
 	public int fitness(int[] contract) {
 		//Fink
-		int weightSum = 0;
+		int weightSum = baseProcessingTimeSum;
 		for (int i = 1; i < contract.length; i++) {// starte bei zweitem Job
 			int jobVor = contract[i - 1];
 			int job    = contract[i];
 			int multi  = contract.length-i; 
 			weightSum += (delayMatrix[jobVor][job]*multi);
 		}
+		return weightSum;
+	}
 
-		for(int i=0;i<timeMatrix.length;i++) {
-			for(int j=0;j<timeMatrix[i].length;j++) {
-				weightSum += timeMatrix[i][j];
+	public int[] createNEHContract() {
+		int n = timeMatrix.length;
+		Integer[] jobs = new Integer[n];
+		int[] procSum = new int[n];
+		for (int i = 0; i < n; i++) {
+			jobs[i] = i;
+			for (int j = 0; j < timeMatrix[i].length; j++) {
+				procSum[i] += timeMatrix[i][j];
 			}
 		}
-		return (weightSum);
+		// Sortiere nach kompletter Bearbeitungsdauer absteigend
+		java.util.Arrays.sort(jobs, (a, b) -> procSum[b] - procSum[a]);
+
+		int[] currentContract = new int[1];
+		currentContract[0] = jobs[0];
+
+		for (int i = 1; i < n; i++) {
+			int bestFit = Integer.MAX_VALUE;
+			int[] bestContract = new int[i + 1];
+
+			for (int pos = 0; pos <= i; pos++) {
+				int[] testContract = new int[i + 1];
+				// Kopiere vordere Elemente
+				for (int j = 0; j < pos; j++) testContract[j] = currentContract[j];
+				// Füge neuen Job an "pos" ein
+				testContract[pos] = jobs[i];
+				// Kopiere hintere Elemente
+				for (int j = pos; j < i; j++) testContract[j + 1] = currentContract[j];
+
+				// Auffüllen auf Gesamtlänge für Fitness Evaluation
+				int[] fullContractForTest = new int[n];
+				for (int j = 0; j < testContract.length; j++) fullContractForTest[j] = testContract[j];
+				int remIdx = testContract.length;
+				for (int j = i + 1; j < n; j++) fullContractForTest[remIdx++] = jobs[j];
+
+				int fit = fitness(fullContractForTest);
+				if (fit < bestFit) {
+					bestFit = fit;
+					for (int j = 0; j < testContract.length; j++) bestContract[j] = testContract[j];
+				}
+			}
+			currentContract = bestContract;
+		}
+
+		return currentContract;
 	}
 
 	public void initContract(){
@@ -130,6 +173,14 @@ public class CustomerAgent extends Agent {
 		}
 		
 		localContract = contract;
+	}
+
+	public int getBaseProcessingTimeSum() {
+		return baseProcessingTimeSum;
+	}
+
+	public int getNumMachines() {
+		return timeMatrix[0].length;
 	}
 
 }
