@@ -72,3 +72,84 @@ ERGEBNIS (8 Inseln parallel):
    Schlechtestes   : 158836
    Spanne          : 574
    Laufzeit        : 510s  (sequenziell wäre ~4080s)
+
+Island-Model: 8 parallele Inseln (heterogen)
+MaxGen=100000 | Migration alle 10000 Gen
+Insel    Pop    Mut    StagLimit  Elite
+0        20     0,90   2000       2
+1        30     0,80   2000       4
+2        40     0,70   1500       4
+3        50     0,60   2500       5
+4        60     0,50   1000       2
+5        70     0,40   1200       3
+6        80     0,30   3000       5     
+7        80     0,20   500        1
+──────────────────────────────────────────────────────────────────
+   [Insel-0] MutRate=0,90 | Restarts: 44
+   Insel 0 fertig: 159827
+   [Insel-1] MutRate=0,80 | Restarts: 46
+   Insel 1 fertig: 158644
+   [Insel-3] MutRate=0,60 | Restarts: 29
+   Insel 3 fertig: 159975
+   [Insel-6] MutRate=0,30 | Restarts: 27
+   Insel 6 fertig: 160648
+   [Insel-2] MutRate=0,70 | Restarts: 60
+   Insel 2 fertig: 159742
+   [Insel-5] MutRate=0,40 | Restarts: 71
+   Insel 5 fertig: 158962
+   [Insel-4] MutRate=0,50 | Restarts: 88
+   Insel 4 fertig: 158692
+   [Insel-7] MutRate=0,20 | Restarts: 184
+   Insel 7 fertig: 158147
+
+════════════════════════════════════════════════════════════════════
+ERGEBNIS (8 Inseln parallel):
+   Bestes Ergebnis : 158147
+   Schlechtestes   : 160648
+   Spanne          : 2501
+   Laufzeit        : 134s  (sequenziell wäre ~1072s)
+════════════════════════════════════════════════════════════════════
+
+
+Island-Model: 10 parallele Inseln (Zufällig kombiniert)
+MaxGen=100000 | Migration alle 10000 Gen
+Insel    Pop    Mut    StagLimit  Elite
+0        40     0,80   500        1
+1        80     0,60   100        4
+2        70     0,20   1000       4
+3        50     0,50   2500       5
+4        70     0,40   1500       4
+5        80     0,30   500        4
+6        70     0,20   2000       5
+7        70     0,20   100        5
+8        40     0,30   1000       2
+9        80     0,80   2500       3
+──────────────────────────────────────────────────────────────────
+   [Insel-3] MutRate=0,50 | Restarts: 32
+   Insel 3 fertig: 159416
+   [Insel-6] MutRate=0,20 | Restarts: 39
+   Insel 6 fertig: 159363
+   [Insel-9] MutRate=0,80 | Restarts: 32
+   Insel 9 fertig: 159736
+   [Insel-4] MutRate=0,40 | Restarts: 58
+   Insel 4 fertig: 159523
+   [Insel-8] MutRate=0,30 | Restarts: 86
+   Insel 8 fertig: 159192
+   [Insel-2] MutRate=0,20 | Restarts: 88
+   Insel 2 fertig: 159366
+   [Insel-0] MutRate=0,80 | Restarts: 185
+   Insel 0 fertig: 158778
+   [Insel-5] MutRate=0,30 | Restarts: 190
+   Insel 5 fertig: 158885
+   [Insel-1] MutRate=0,60 | Restarts: 975
+   Insel 1 fertig: 157724
+   [Insel-7] MutRate=0,20 | Restarts: 974
+   Insel 7 fertig: 157948
+
+════════════════════════════════════════════════════════════════════
+ERGEBNIS (10 Inseln parallel):
+   Bestes Ergebnis : 157724
+   Schlechtestes   : 159736
+   Spanne          : 2012
+   Laufzeit        : 595s  (sequenziell wäre ~5950s)
+════════════════════════════════════════════════════════════════════

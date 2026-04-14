@@ -6,17 +6,17 @@ public class GA_CUSTOMER {
 
 	// ── Testsieger GA-Parameter (Grid-Search Ergebnis: Pop=80, Mut=0.40, Stag=2000) ──
 	static int POPULATION_SIZE = 70;
-	static int MAX_GENERATIONS = 1000000;
+	static int MAX_GENERATIONS = 100000;
 	static double MUTATION_RATE = 0.40;
-	static int TOURNAMENT_SIZE = 4;
+	static int TOURNAMENT_SIZE = 2; // (Reduziert für geringeren Selektionsdruck/mehr Vielfalt)
 	static int ELITISM_COUNT = 5; // dynamisch: max(2, pop/20) = 4 bei Pop=80
 
 	// ── Stagnationserkennung ──────────────────────────────────────
 	static int STAGNATION_LIMIT = 2000;
-	static double RESTART_RATIO = 0.40;
+	static double RESTART_RATIO = 0.85; // (Erhöht für massiven Wipeout bei Stagnation)
 
 	// ── Island-Model ─────────────────────────────────────────────────────────
-	static final int MIGRATION_INTERVAL = 3000; // alle N Generationen migrieren
+	static final int MIGRATION_INTERVAL = 10000; // (Erhöht: Inseln bleiben sehr lange isoliert)
 
 	// Geteilte beste Lösung zwischen allen Inseln (volatile + Lock)
 	static volatile int   globalBestFit      = Integer.MAX_VALUE;
@@ -37,17 +37,27 @@ public class GA_CUSTOMER {
 			CustomerAgent ag = new CustomerAgent(file);
 			int n = ag.getContractSize();
 
-			// ── Heterogene Insel-Konfigurationen ─────────────────────────────────
-			// Jede Insel läuft mit anderen Parametern: Explorer vs. Exploiter,
-			// kleine schnelle vs. große gründliche Populationen.
-			int[]    popSizes   = { 50,  80,  100, 120,  60,  80, 100,  50 };
-			double[] mutRates   = {0.35,0.40, 0.50,0.40, 0.70,0.60,0.35,0.75};
-			int[]    stagLimits = {2000,2000, 1500,2500, 1000,1200,3000, 800 };
-			int[]    eliteCnts  = { 3,   4,    4,   5,    2,   3,   5,   2  };
+			// ── 10 Inseln mit vollständig zufälligen Kombinationen aus den Pools ──
+			int[]    poolPopSizes   = { 20,  30,  40, 50,  60,  70, 80,  80};
+			double[] poolMutRates   = {0.90,0.80, 0.70,0.60, 0.50,0.40,0.30,0.20};
+			int[]    poolStagLimits = {2000,50, 1500,2500, 1000,200,70, 500 };
+			int[]    poolEliteCnts  = { 2,   4,    4,   5,    2,   3,   5,   1  };
 
-			int islands = Math.min(Runtime.getRuntime().availableProcessors(), popSizes.length);
+			int islands = 10;
+			int[]    popSizes   = new int[islands];
+			double[] mutRates   = new double[islands];
+			int[]    stagLimits = new int[islands];
+			int[]    eliteCnts  = new int[islands];
 
-			System.out.println("Island-Model: " + islands + " parallele Inseln (heterogen)");
+			Random initRnd = new Random();
+			for (int i = 0; i < islands; i++) {
+				popSizes[i]   = poolPopSizes[initRnd.nextInt(poolPopSizes.length)];
+				mutRates[i]   = poolMutRates[initRnd.nextInt(poolMutRates.length)];
+				stagLimits[i] = poolStagLimits[initRnd.nextInt(poolStagLimits.length)];
+				eliteCnts[i]  = poolEliteCnts[initRnd.nextInt(poolEliteCnts.length)];
+			}
+
+			System.out.println("Island-Model: " + islands + " parallele Inseln (Zufällig kombiniert)");
 			System.out.println("MaxGen=" + MAX_GENERATIONS + " | Migration alle " + MIGRATION_INTERVAL + " Gen");
 			System.out.printf("%-8s %-6s %-6s %-10s %-6s%n","Insel","Pop","Mut","StagLimit","Elite");
 			for (int t = 0; t < islands; t++)
@@ -223,10 +233,13 @@ public class GA_CUSTOMER {
 						for (int m = 0; m < numMutations; m++) mutate(mutant);
 						population[i] = mutant;
 					} else if (zone < 0.7) {
-						// 30%: starke Perturbation → erzwingt Ausbruch aus tiefem Lokaloptimum
+						// 30%: starke Perturbation (aggressiv) → erzwingt Ausbruch aus tiefem Lokaloptimum
 						int[] mutant = sorted[rng().nextInt(topK)].clone();
-						int numMutations = n / 5 + rng().nextInt(n / 5);
-						for (int m = 0; m < numMutations; m++) mutate(mutant);
+						int numMutations = n / 3 + rng().nextInt(n / 3); // (massiv erhöht, vorher n/5)
+						for (int m = 0; m < numMutations; m++) {
+							if (rng().nextDouble() < 0.2) inversionMutation(mutant); // Toxisch aber gut zum Ausbrechen
+							else mutate(mutant);
+						}
 						population[i] = mutant;
 					} else {
 						// 30%: Double-Bridge von bestEver → garantiert anderes Basin,
@@ -259,8 +272,8 @@ public class GA_CUSTOMER {
 			}
 
 			double currentProgress = (double) gen / MAX_GENERATIONS;
-			double adaptiveMutationRate = mutRate + (0.10 * currentProgress);
-			int mutationPower = 1 + (int) (1.0 * currentProgress); // 1 → 2
+			double adaptiveMutationRate = mutRate + (0.35 * currentProgress); // Steigt deutlich stärker an
+			int mutationPower = 1 + (int) (3.0 * currentProgress); // 1 → 4 Mutationen im Lategame
 
 			for (int i = elitismCount; i < popSize; i++) {
 				int[] parent1 = tournamentSelection(population, fitnessValues);
