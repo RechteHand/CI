@@ -218,87 +218,134 @@ public class GA_CUSTOMER {
 		return bestEverFit;
 	}
 
-	// ── Lokale Suche: VNS (Variable Neighborhood Search) ──
+	// ── Lokale Suche: VNS (Variable Neighborhood Search) mit Delta-Fitness ──
+	// Swap-Delta: O(1). Insert-Delta: O(|to-from|). Kein Full-Fitness-Recompute mehr.
 	static int localSearch(int[] individual, CustomerAgent ag, int currentBestFit) {
 		int n = individual.length;
+		int[][] delay = ag.getDelayMatrix();
 		int currentFit = currentBestFit;
 		boolean improved = true;
 
-		// Wiederhole den Scan, solange noch Verbesserungen gefunden werden
 		while (improved) {
 			improved = false;
 
-			// ── NEIGHBORHOOD 1: FULL INSERT (Maximale Zerstörungskraft) ──
+			// ── NEIGHBORHOOD 1: FULL INSERT (Delta-Fitness) ──
+			outerInsert:
 			for (int from = 0; from < n; from++) {
 				for (int to = 0; to < n; to++) {
 					if (from == to)
 						continue;
 
-					int gene = individual[from];
-					if (from < to) {
-						for (int i = from; i < to; i++)
-							individual[i] = individual[i + 1];
-					} else {
-						for (int i = from; i > to; i--)
-							individual[i] = individual[i - 1];
-					}
-					individual[to] = gene;
-
-					int newFit = ag.fitness(individual);
+					int newFit = insertFit(individual, from, to, currentFit, delay, n);
 
 					if (newFit < currentFit) {
+						applyInsert(individual, from, to);
 						currentFit = newFit;
 						improved = true;
-						break;
-					} else {
-						// Undo
-						int geneToRestore = individual[to];
-						if (from < to) {
-							for (int i = to; i > from; i--)
-								individual[i] = individual[i - 1];
-						} else {
-							for (int i = to; i < from; i++)
-								individual[i] = individual[i + 1];
-						}
-						individual[from] = geneToRestore;
+						break outerInsert;
 					}
 				}
-				if (improved)
-					break;
 			}
 
-			// ── NEIGHBORHOOD 2: FULL SWAP (Ausbruchs-Nachbarschaft) ──
-			// Feuert nur, wenn Insert völlig in einer Sackgasse steckt (improved == false)
+			// ── NEIGHBORHOOD 2: FULL SWAP (Delta-Fitness) ──
 			if (!improved) {
-				for (int i = 0; i < n - 1 && !improved; i++) {
+				outerSwap:
+				for (int i = 0; i < n - 1; i++) {
 					for (int j = i + 1; j < n; j++) {
 
-						int tmp = individual[i];
-						individual[i] = individual[j];
-						individual[j] = tmp;
-
-						int newFit = ag.fitness(individual);
+						int newFit = swapFit(individual, i, j, currentFit, delay, n);
 
 						if (newFit < currentFit) {
-							currentFit = newFit;
-							improved = true;
-							break;
-						} else {
-							// Rücktausch (Undo)
-							tmp = individual[i];
+							int tmp = individual[i];
 							individual[i] = individual[j];
 							individual[j] = tmp;
+							currentFit = newFit;
+							improved = true;
+							break outerSwap;
 						}
 					}
 				}
 			}
-			// Wenn der Swap erfolgreich war, setzt es 'improved = true', das while()
-			// springt wieder
-			// an den Start und schöpft wieder ZUERST das feingranulare Insert-Modell
-			// komplett aus!
-			// Das ist das exakte Design eines echten VNS (Variable Neighborhood Search).
 		}
 		return currentFit;
+	}
+
+	// Delta-Fitness für Swap(i, j) mit i < j. O(1).
+	static int swapFit(int[] p, int i, int j, int curFit, int[][] delay, int n) {
+		int a = p[i], b = p[j];
+		int oldSum = 0, newSum = 0;
+
+		if (i > 0) {
+			int prev = p[i - 1];
+			oldSum += delay[prev][a] * (n - i);
+			newSum += delay[prev][b] * (n - i);
+		}
+		if (j == i + 1) {
+			oldSum += delay[a][b] * (n - j);
+			newSum += delay[b][a] * (n - j);
+		} else {
+			int nextI = p[i + 1];
+			oldSum += delay[a][nextI] * (n - i - 1);
+			newSum += delay[b][nextI] * (n - i - 1);
+			int prevJ = p[j - 1];
+			oldSum += delay[prevJ][b] * (n - j);
+			newSum += delay[prevJ][a] * (n - j);
+		}
+		if (j + 1 < n) {
+			int nextJ = p[j + 1];
+			oldSum += delay[b][nextJ] * (n - j - 1);
+			newSum += delay[a][nextJ] * (n - j - 1);
+		}
+		return curFit - oldSum + newSum;
+	}
+
+	// Delta-Fitness für Insert(from → to). O(|to - from|).
+	static int insertFit(int[] p, int from, int to, int curFit, int[][] delay, int n) {
+		int oldSum = 0, newSum = 0;
+		if (from < to) {
+			if (from > 0) {
+				oldSum += delay[p[from - 1]][p[from]] * (n - from);
+				newSum += delay[p[from - 1]][p[from + 1]] * (n - from);
+			}
+			for (int k = from + 1; k < to; k++) {
+				oldSum += delay[p[k - 1]][p[k]] * (n - k);
+				newSum += delay[p[k]][p[k + 1]] * (n - k);
+			}
+			oldSum += delay[p[to - 1]][p[to]] * (n - to);
+			newSum += delay[p[to]][p[from]] * (n - to);
+			if (to + 1 < n) {
+				oldSum += delay[p[to]][p[to + 1]] * (n - to - 1);
+				newSum += delay[p[from]][p[to + 1]] * (n - to - 1);
+			}
+		} else {
+			if (to > 0) {
+				oldSum += delay[p[to - 1]][p[to]] * (n - to);
+				newSum += delay[p[to - 1]][p[from]] * (n - to);
+			}
+			oldSum += delay[p[to]][p[to + 1]] * (n - to - 1);
+			newSum += delay[p[from]][p[to]] * (n - to - 1);
+			for (int k = to + 2; k <= from; k++) {
+				oldSum += delay[p[k - 1]][p[k]] * (n - k);
+				newSum += delay[p[k - 2]][p[k - 1]] * (n - k);
+			}
+			if (from + 1 < n) {
+				oldSum += delay[p[from]][p[from + 1]] * (n - from - 1);
+				newSum += delay[p[from - 1]][p[from + 1]] * (n - from - 1);
+			}
+		}
+		return curFit - oldSum + newSum;
+	}
+
+	static void applyInsert(int[] p, int from, int to) {
+		int gene = p[from];
+		if (from < to) {
+			for (int i = from; i < to; i++)
+				p[i] = p[i + 1];
+		} else {
+			for (int i = from; i > to; i--)
+				p[i] = p[i - 1];
+		}
+		p[to] = gene;
 	}
 
 	// ── Gewichtete Mutation: Insert ist King bei asymmetrischen Problemen!
@@ -377,7 +424,8 @@ public class GA_CUSTOMER {
 			if (fitnessValues[candidate] < fitnessValues[bestIdx])
 				bestIdx = candidate;
 		}
-		return population[bestIdx].clone();
+		// Kein clone(): orderCrossover liest die Parents nur, mutiert sie nicht.
+		return population[bestIdx];
 	}
 
 	static int[] orderCrossover(int[] parent1, int[] parent2) {
