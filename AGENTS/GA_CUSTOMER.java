@@ -141,6 +141,8 @@ public class GA_CUSTOMER {
 			int threadLocalBestFit = globalBestFit.get();
 			int[] currentBest = globalBestContract.get().clone();
 			double T_base = (double) ag.getBaseProcessingTimeSum() / (10.0 * n * ag.getNumMachines()) * 0.4;
+			double currentTemp = T_base;
+			int reheatCounter = 0;
 
 			while (gaRunning.get()) {
 				// Resync mit GA, falls die Evolution ein noch besseres Peak gefunden hat
@@ -148,12 +150,21 @@ public class GA_CUSTOMER {
 				if (currentGlobalFit < threadLocalBestFit) {
 					threadLocalBestFit = currentGlobalFit;
 					currentBest = globalBestContract.get().clone();
+					currentTemp = T_base;
+					reheatCounter = 0;
 				}
 
-				int newFit = iteratedGreedySearch(currentBest, ag, threadLocalBestFit, T_base);
+				// Dynamischer Destruction Faktor (Variable Neighborhood Destruction)
+				int d = 3; 
+				if (reheatCounter > 20) {
+					d = 6; // Big Ruin (Ausbruchs-Versuch)
+				}
+
+				int newFit = iteratedGreedySearch(currentBest, ag, threadLocalBestFit, currentTemp, d);
 
 				if (newFit < threadLocalBestFit) {
 					threadLocalBestFit = newFit;
+					reheatCounter = 0;
 					if (newFit < globalBestFit.get()) {
 						globalBestFit.set(newFit);
 						globalBestContract.set(currentBest.clone());
@@ -161,6 +172,14 @@ public class GA_CUSTOMER {
 				} else {
 					// SA Akzeptanz. Eine temporäre Verschlechterung wurde beibehalten
 					threadLocalBestFit = newFit;
+					reheatCounter++;
+				}
+
+				// Adaptive Cooling Schedule & Re-Heating
+				currentTemp *= 0.995;
+				if (reheatCounter > 50) {
+					currentTemp = T_base; // Reheat!
+					reheatCounter = 0;
 				}
 			}
 		});
@@ -248,7 +267,14 @@ public class GA_CUSTOMER {
 			int mutationPower = 1 + (int) (3.0 * currentProgress);
 
 			for (int i = ELITISM_COUNT; i < POPULATION_SIZE; i++) {
-				int[] parent1 = tournamentSelection(population, fitnessValues);
+				int[] parent1;
+				// ── 10% Alpha-Wolf Mating (Hybride Kreuzung) ──
+				if (rng.nextDouble() < 0.10) {
+					parent1 = globalBestContract.get().clone();
+				} else {
+					parent1 = tournamentSelection(population, fitnessValues);
+				}
+				
 				int[] parent2 = tournamentSelection(population, fitnessValues);
 
 				int[] child = orderCrossover(parent1, parent2);
@@ -275,9 +301,8 @@ public class GA_CUSTOMER {
 	}
 
 	// ── Iterated Greedy Local Search (Ruin & Recreate) mit Simulated Annealing ──
-	static int iteratedGreedySearch(int[] currentBest, CustomerAgent ag, int currentFit, double temperature) {
+	static int iteratedGreedySearch(int[] currentBest, CustomerAgent ag, int currentFit, double temperature, int d) {
 		int n = currentBest.length;
-		int d = 4; // Zerstörungs-Faktor (Anzahl der zu verschiebenden Jobs)
 		if (n <= d)
 			return currentFit;
 
