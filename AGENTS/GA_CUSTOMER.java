@@ -6,13 +6,13 @@ public class GA_CUSTOMER {
 
 	// ── Testsieger GA-Parameter (jetzt dynamisch einstellbar) ────────────────
 	static int POPULATION_SIZE = 70;
-	static int MAX_GENERATIONS = 100000;
+	static int MAX_GENERATIONS = 80000;
 	static double MUTATION_RATE = 0.60;
 	static int TOURNAMENT_SIZE = 4;
 	static int ELITISM_COUNT = 3;
 
 	// ── Stagnationserkennung ──────────────────────────────────────
-	static int STAGNATION_LIMIT = 1000;
+	static int STAGNATION_LIMIT = 1200;
 	static double RESTART_RATIO = 0.40;
 
 	static Random rng = new Random();
@@ -20,7 +20,7 @@ public class GA_CUSTOMER {
 	public static void main(String[] args) {
 
 		try {
-			File file = new File("CI/AGENTS/daten3ACustomer_200_10.txt");
+			File file = new File("/Users/max/Documents/CI/AGENTS/daten3ACustomer_200_10.txt");
 			if (!file.exists()) {
 				file = new File("daten3ACustomer_200_10.txt");
 			}
@@ -28,9 +28,9 @@ public class GA_CUSTOMER {
 			int n = ag.getContractSize();
 
 			// ── Grid-Search Definitionen ──
-			int[] popSizes = { 50, 80 };
-			double[] mutRates = { 0.40, 0.90 };
-			int[] stagLimits = { 500, 2000 };
+			int[] popSizes = { 50, 70 };
+			double[] mutRates = { 0.40, 0.60 };
+			int[] stagLimits = { 500, 1200 };
 
 			int runsPerConfig = 2; // Jeweils Durchschnitt aus mehreren Läufen berechnen
 			MAX_GENERATIONS = 25000; // Weniger Generationen für die breite Parametersuche
@@ -219,7 +219,8 @@ public class GA_CUSTOMER {
 	}
 
 	// ── Lokale Suche: VNS (Variable Neighborhood Search) mit Delta-Fitness ──
-	// Swap-Delta: O(1). Insert-Delta: O(|to-from|). Kein Full-Fitness-Recompute mehr.
+	// Swap-Delta: O(1). Insert-Delta: O(|to-from|). Kein Full-Fitness-Recompute
+	// mehr.
 	static int localSearch(int[] individual, CustomerAgent ag, int currentBestFit) {
 		int n = individual.length;
 		int[][] delay = ag.getDelayMatrix();
@@ -230,8 +231,7 @@ public class GA_CUSTOMER {
 			improved = false;
 
 			// ── NEIGHBORHOOD 1: FULL INSERT (Delta-Fitness) ──
-			outerInsert:
-			for (int from = 0; from < n; from++) {
+			outerInsert: for (int from = 0; from < n; from++) {
 				for (int to = 0; to < n; to++) {
 					if (from == to)
 						continue;
@@ -249,8 +249,7 @@ public class GA_CUSTOMER {
 
 			// ── NEIGHBORHOOD 2: FULL SWAP (Delta-Fitness) ──
 			if (!improved) {
-				outerSwap:
-				for (int i = 0; i < n - 1; i++) {
+				outerSwap: for (int i = 0; i < n - 1; i++) {
 					for (int j = i + 1; j < n; j++) {
 
 						int newFit = swapFit(individual, i, j, currentFit, delay, n);
