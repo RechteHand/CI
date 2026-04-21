@@ -6,9 +6,10 @@ public class CustomerAgent extends Agent {
 
 	private int[][] timeMatrix;
 	private int[][] delayMatrix;// wird anhand der timeMatrix berechnet
+	private int totalTimeSum;   // Konstante über alle Contracts → einmal vorberechnen
 	int[]   localContract;
-	
-	
+
+
 	public CustomerAgent(File file) throws FileNotFoundException {
 
 		Scanner scanner = new Scanner(file);
@@ -21,11 +22,22 @@ public class CustomerAgent extends Agent {
 				timeMatrix[i][j] = x;
 			}
 		}
-		calculateDelay(timeMatrix.length);		
-		
+		calculateDelay(timeMatrix.length);
+
+		int sum = 0;
+		for (int i = 0; i < timeMatrix.length; i++) {
+			for (int j = 0; j < timeMatrix[i].length; j++) {
+				sum += timeMatrix[i][j];
+			}
+		}
+		totalTimeSum = sum;
 
 		scanner.close();
 
+	}
+
+	public int[][] getDelayMatrix() {
+		return delayMatrix;
 	}
 
 	public boolean vote(int[] contract, int[] proposal) {
@@ -99,21 +111,13 @@ public class CustomerAgent extends Agent {
 	}
 
 	public int fitness(int[] contract) {
-		//Fink
+		//Fink — totalTimeSum ist kontractunabhängig und vorberechnet
 		int weightSum = 0;
-		for (int i = 1; i < contract.length; i++) {// starte bei zweitem Job
-			int jobVor = contract[i - 1];
-			int job    = contract[i];
-			int multi  = contract.length-i; 
-			weightSum += (delayMatrix[jobVor][job]*multi);
+		int n = contract.length;
+		for (int i = 1; i < n; i++) {
+			weightSum += delayMatrix[contract[i - 1]][contract[i]] * (n - i);
 		}
-
-		for(int i=0;i<timeMatrix.length;i++) {
-			for(int j=0;j<timeMatrix[i].length;j++) {
-				weightSum += timeMatrix[i][j];
-			}
-		}
-		return (weightSum);
+		return weightSum + totalTimeSum;
 	}
 
 	// Gibt Jobs sortiert nach absteigender Gesamtbearbeitungszeit zurück (für NEH-Initialisierung)

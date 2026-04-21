@@ -190,6 +190,77 @@ Der CustomerAgent berechnet eine **Delay-Matrix** `delayMatrix[h][j]`, die angib
 
 Die `fitness()`-Methode gewichtet Delays stärker, die **früh** in der Sequenz auftreten (Faktor `n-i`), da ein früher Delay alle nachfolgenden Jobs beeinflusst.
 
+> **Performance-Hinweis:** `Σ aller Bearbeitungszeiten` ist kontraktunabhängig und wird einmalig im Konstruktor als `totalTimeSum` vorberechnet. Der Fitness-Aufruf ist dadurch reiner O(n).
+
+---
+
+## 🧬 Genetischer Algorithmus — `GA_CUSTOMER`
+
+`GA_CUSTOMER.java` ist ein **memetischer GA** (GA + lokale Suche), der ausschließlich aus Sicht des CustomerAgent nach einer optimalen Permutation sucht. Er dient als Benchmark für die Qualität, die ein einzelner Agent erreichen könnte, und als Referenz für das Multi-Agenten-Verhandlungssystem.
+
+### Gesamtablauf
+
+```mermaid
+flowchart TD
+    INIT["🎲 Population: POPULATION_SIZE\nzufällige Permutationen"] --> EVAL["Fitness aller Individuen"]
+    EVAL --> BEST["Bestes Individuum bestimmen"]
+    BEST --> IMPROVED{"Neuer Champion?"}
+
+    IMPROVED -- "Ja" --> LS["🧗 Local Search (VNS)\nauf Champion"]
+    IMPROVED -- "Nein" --> STAG_CHECK
+
+    LS --> STAG_CHECK{"Stagnation\n> STAGNATION_LIMIT?"}
+
+    STAG_CHECK -- "Ja" --> RESTART["🔄 Partieller Restart:\nTop-K behalten, Rest mutieren"]
+    RESTART --> NEXT_GEN
+    STAG_CHECK -- "Nein" --> PULSE{"gen % 250 == 0?"}
+
+    PULSE -- "Ja" --> MEMETIC["💡 Memetic Pulse:\nLocal Search auf\naktuellen Generation-Champion\n(Lamarck'sche Vererbung)"]
+    PULSE -- "Nein" --> BREED
+    MEMETIC --> BREED
+
+    BREED["👶 Neue Generation:\n• Elite übernehmen\n• Tournament Selection\n• Order Crossover\n• Adaptive Mutation"] --> NEXT_GEN
+
+    NEXT_GEN["gen++"] --> DONE{"gen = MAX_GENERATIONS?"}
+    DONE -- "Nein" --> EVAL
+    DONE -- "Ja" --> END(["🏁 Beste Fitness zurückgeben"])
+
+    style INIT fill:#4CAF50,color:#fff
+    style LS fill:#9C27B0,color:#fff
+    style MEMETIC fill:#E91E63,color:#fff
+    style RESTART fill:#FF9800,color:#fff
+    style END fill:#f44336,color:#fff
+```
+
+### Bausteine im Detail
+
+| Komponente | Verfahren | Parameter / Besonderheit |
+|---|---|---|
+| **Selektion** | Tournament Selection | `TOURNAMENT_SIZE = 4`; gibt Parent-Referenz zurück (kein Clone — Crossover liest nur) |
+| **Crossover** | Order Crossover (OX) | Übernimmt zufälliges Segment von Parent 1, füllt Restpositionen in der Reihenfolge aus Parent 2 |
+| **Mutation** | Gewichteter Mix | 30 % Swap, 70 % Insert (Inversion ist für dieses Problem toxisch und deaktiviert) |
+| **Elitismus** | Top-K direkt übernehmen | `ELITISM_COUNT = max(2, POP/20)` |
+| **Adaptive Mutation** | Rate + Power steigen mit Fortschritt | `rate = MUTATION_RATE + 0.35·(gen/MAX_GEN)`; `power = 1 + 3·(gen/MAX_GEN)` |
+| **Local Search (VNS)** | First-Improvement, zwei Nachbarschaften | **Insert** zuerst (feingranular), bei Sackgasse **Swap** als Ausbruch. Iteriert bis Konvergenz. |
+| **Memetic Pulse** | Alle 250 Gen Local Search auf Generation-Champion | Ergebnis fließt zurück in den Genpool (Lamarck'sche Evolution) |
+| **Stagnationserkennung** | Keine Verbesserung seit N Gen | `STAGNATION_LIMIT` konfigurierbar |
+| **Partieller Restart** | Top-(1−RATIO) behalten, Rest stark mutierte Kopien der Top-10 | `RESTART_RATIO = 0.40`, `bestEver` wird garantiert behalten |
+
+### Delta-Fitness in der Local Search
+
+Die Local Search ist der Laufzeit-Bottleneck: Für jede Nachbarschaft durchläuft sie `O(n²)` Kandidaten-Moves. Statt jeden Move probehalber auszuführen und anschließend die volle Fitness `O(n)` neu zu berechnen (+ Undo), wird direkt die **Fitness-Differenz** ausgerechnet:
+
+| Move | Delta-Komplexität | Betroffene Kanten |
+|---|---|---|
+| `swapFit(i, j)` | **O(1)** | 3–4 Kanten um Positionen `i`, `j` |
+| `insertFit(from, to)` | **O(\|to − from\|)** | Kanten zwischen `from` und `to` |
+
+Nur bei echter Verbesserung wird der Move tatsächlich auf das Array angewendet — kein Undo mehr nötig. Gegenüber dem naiven Ansatz bringt das in etwa **Faktor n Speedup** auf die Local Search.
+
+### Automatisches Grid-Search
+
+Die `main()` führt standardmäßig eine **Hyperparameter-Suche** über Populationsgröße, Mutationsrate und Stagnationslimit durch und meldet die beste Kombination am Ende — statt mit festen Parametern zu laufen.
+
 ---
 
 ### 🤝 Mediator — Der Vermittler
