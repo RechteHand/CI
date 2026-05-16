@@ -8,3 +8,14 @@
 .idea/
 .vscode/
 *.iml
+
+# Rust build output
+**/target/
+
+# Python compile/cache artifacts
+**/__pycache__/
+**/.venv/
+*.py[cod]
+
+# nn data
+**/data/

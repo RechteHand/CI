@@ -1,0 +1,83 @@
+{
+  "data_file": "../java/daten3ACustomer_200_10.txt",
+  "total_iterations": 100000,
+  "migration_interval": 500,
+  "olympic_interval": 2000,
+  "islands": [
+    {
+      "selection": "Tournament",
+      "crossover": "OrderCrossover",
+      "mutation": "InversionMutation",
+      "pop_size": 50,
+      "mutation_rate": 0.18,
+      "local_search_rate": 0.04,
+      "local_search_intensity": 16,
+      "stagnation_threshold": 4,
+      "diversity_floor": 0.28,
+      "adaptive_mutation_boost": 1.60,
+      "death_chance": 0.15,
+      "parameter_evolution_interval": 400,
+      "parameter_shift_rate": 0.10
+    },
+    {
+      "selection": "RankBased",
+      "crossover": "PartiallyMappedCrossover",
+      "mutation": "InsertionMutation",
+      "pop_size": 50,
+      "mutation_rate": 0.26,
+      "local_search_rate": 0.08,
+      "local_search_intensity": 20,
+      "stagnation_threshold": 5,
+      "diversity_floor": 0.32,
+      "adaptive_mutation_boost": 1.45,
+      "death_chance": 0.15,
+      "parameter_evolution_interval": 500,
+      "parameter_shift_rate": 0.10
+    },
+    {
+      "selection": "Roulette",
+      "crossover": "CycleCrossover",
+      "mutation": "ScrambleMutation",
+      "pop_size": 60,
+      "mutation_rate": 0.30,
+      "local_search_rate": 0.03,
+      "local_search_intensity": 10,
+      "stagnation_threshold": 4,
+      "diversity_floor": 0.35,
+      "adaptive_mutation_boost": 1.75,
+      "death_chance": 0.15,
+      "parameter_evolution_interval": 300,
+      "parameter_shift_rate": 0.10
+    },
+    {
+      "selection": "Tournament",
+      "crossover": "OrderCrossover",
+      "mutation": "ScrambleMutation",
+      "pop_size": 40,
+      "mutation_rate": 0.14,
+      "local_search_rate": 0.10,
+      "local_search_intensity": 28,
+      "stagnation_threshold": 6,
+      "diversity_floor": 0.24,
+      "adaptive_mutation_boost": 1.35,
+      "death_chance": 0.15,
+      "parameter_evolution_interval": 600,
+      "parameter_shift_rate": 0.10
+    },
+    {
+      "selection": "RankBased",
+      "crossover": "CycleCrossover",
+      "mutation": "InversionMutation",
+      "pop_size": 50,
+      "mutation_rate": 0.22,
+      "local_search_rate": 0.06,
+      "local_search_intensity": 18,
+      "stagnation_threshold": 3,
+      "diversity_floor": 0.30,
+      "adaptive_mutation_boost": 1.90,
+      "death_chance": 0.15,
+      "parameter_evolution_interval": 450,
+      "parameter_shift_rate": 0.10
+    }
+  ]
+}
