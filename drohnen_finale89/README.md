@@ -7,12 +7,12 @@ Dieses Modul simuliert die Choreografie eines Drohnenschwarms, der sich zu spezi
 Die Klasse `FinaleSimulation` ermöglicht es, eigene Bilder (im PNG- oder JPG-Format) und Texte über die Kommandozeilenargumente zu übergeben. Die Argumente müssen in dieser strikten Reihenfolge vorliegen:
 
 ```bash
-java FinaleSimulation <Logo_Links_Pfad> <Logo_Rechts_Pfad> <Team_Links> <Team_Rechts> <Score_Links> <Score_Rechts> <Titel> [Untertitel]
+java FinaleSimulation <Logo_Links_Pfad> <Logo_Rechts_Pfad> <Team_Links> <Team_Rechts> <Score_Links> <Score_Rechts> <Titel>
 ```
 
 **Beispielaufruf:**
 ```bash
-java FinaleSimulation "bayern.png" "psg.png" "FC BAYERN" "PARIS SG" "3" "2" "CHAMPIONS LEAGUE 2025"
+java FinaleSimulation "bayern.png" "napoli.png" "FC BAYERN" "SSC NAPOLI" "1" "1" "CHAMPIONS LEAGUE 2025"
 ```
 Wird das Programm ohne Argumente aufgerufen, lädt es den Standarddatensatz (Napoli vs. VfB Stuttgart 1989). Wenn eine Bilddatei nicht im Verzeichnis gefunden wird, zeichnet die Engine als Fallback einen farbigen Kreis mit dem Namenskürzel.
 
