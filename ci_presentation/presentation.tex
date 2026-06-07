@@ -1,0 +1,383 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{tikz}
+\usepackage{adjustbox} % For max width / max height scaling
+\usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds,decorations.pathreplacing}
+\usepackage{xcolor}
+
+% High-Contrast Colors
+\definecolor{HFTBlue}{RGB}{0, 51, 102}
+\definecolor{HFTTeal}{RGB}{0, 102, 102}
+\definecolor{DarkText}{RGB}{0, 0, 0}
+\definecolor{BoxOutline}{RGB}{0, 51, 102}
+\definecolor{BoxFill}{RGB}{240, 248, 255}
+\definecolor{BoxTealFill}{RGB}{230, 245, 245}
+
+% Theme
+\mode<presentation> {
+    \usetheme{default}
+    \setbeamertemplate{navigation symbols}{} 
+    
+    % Pure white background for maximum contrast
+    \setbeamercolor{background canvas}{bg=white}
+    
+    % Custom Title Page
+    \setbeamertemplate{title page}{
+        \begin{tikzpicture}[remember picture,overlay]
+            \fill[HFTBlue] (current page.north west) rectangle ([yshift=-4.5cm]current page.north east);
+            \fill[HFTTeal] ([yshift=-4.5cm]current page.north west) rectangle ([yshift=-4.65cm]current page.north east);
+        \end{tikzpicture}
+        \vspace{0.8cm}
+        \begin{center}
+            {\Huge\bfseries\textcolor{white}{\inserttitle}}\par\vspace{0.4cm}
+            {\Large\textcolor{white}{\insertsubtitle}}\par\vspace{3.5cm}
+            {\Large\textcolor{DarkText}{\textbf{\insertauthor}}}\par\vspace{0.3cm}
+            {\large\textcolor{HFTTeal}{\textbf{\insertinstitute}}}\par\vspace{0.5cm}
+            {\normalsize\textcolor{gray}{\insertdate}}
+        \end{center}
+    }
+    
+    % Robust Edge-to-Edge Frame Title
+    \setbeamercolor{frametitle}{bg=HFTBlue, fg=white}
+    \setbeamercolor{frametitle separator}{bg=HFTTeal}
+    \setbeamerfont{frametitle}{size=\Large, series=\bfseries}
+    
+    \setbeamertemplate{frametitle}{
+        \nointerlineskip
+        \begin{beamercolorbox}[wd=\paperwidth,leftskip=0.5cm,rightskip=0.5cm,ht=1cm,dp=0.35cm]{frametitle}
+            \usebeamerfont{frametitle}\insertframetitle
+        \end{beamercolorbox}
+        \nointerlineskip
+        \begin{beamercolorbox}[wd=\paperwidth,ht=0.15cm]{frametitle separator}
+        \end{beamercolorbox}
+        \vspace{0.4cm}
+    }
+    
+    % Font colors
+    \setbeamercolor{normal text}{fg=DarkText}
+    \setbeamercolor{item}{fg=HFTTeal}
+    \setbeamercolor{itemize item}{fg=HFTTeal}
+    
+    % Footline: Page number (normal/large size, not huge)
+    \setbeamertemplate{footline}{
+        \ifnum\insertframenumber>1
+            \vspace{0.2cm}
+            \hfill \textbf{\large \textcolor{gray}{\insertframenumber}} \hspace{0.5cm}
+            \vspace{0.3cm}
+        \fi
+    }
+}
+
+\title{Computational Intelligence}
+\subtitle{Projekt-Präsentationen}
+\author{Domenico Avolio, Tim Lukas, Maximilian Murrath}
+\institute{Hochschule für Technik Stuttgart}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}[plain]
+\titlepage
+\end{frame}
+
+% --- Genetic Algorithm ---
+\begin{frame}{Genetischer Algorithmus: Architektur}
+\begin{center}
+\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{tikzpicture}[auto, thick]
+    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=BoxFill, text width=7.5em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
+    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
+
+    % Main Loop Nodes (Rectangle Layout)
+    \node [block] (eval) at (0, 0) {Fitness prüfen (Makespan)};
+    \node [block] (init) at (0, 2.5) {Initialisierung (Inseln)};
+    \node [block] (select) at (0, -2.5) {Selektion (Turnier, Rang)};
+    \node [block] (cross) at (4.5, -2.5) {Crossover (OX, PMX, CX)};
+    \node [block] (mut) at (9, -2.5) {Mutation (Inversion, Scramble)};
+    \node [block] (local) at (9, 0) {Local Search (Sim. Annealing)};
+
+    % Special Nodes
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (migrate) at (4.5, 2.5) {Ring-Migration};
+    \node [block, fill=orange!10, draw=orange!80!black] (olympics) at (9, 2.5) {Olympic Games};
+
+    % Main Loop Edges
+    \path [line] (init) -- (eval);
+    \path [line] (eval) -- (select);
+    \path [line] (select) -- (cross);
+    \path [line] (cross) -- (mut);
+    \path [line] (mut) -- (local);
+    \path [line] (local) -- (eval);
+
+    % Dashed lines for special operations (using xshift to avoid overlap)
+    \path [draw, -latex', dashed, line width=1pt, HFTTeal] ([xshift=-0.5cm]local.north) |- (migrate.east);
+    \path [draw, -latex', dashed, line width=1pt, orange!80!black] ([xshift=0.5cm]local.north) -- ([xshift=0.5cm]olympics.south);
+    
+    % Return paths from special operations to the init phase
+    \path [draw, -latex', dashed, line width=1pt, HFTTeal] (migrate.west) -- (init.east);
+    \path [draw, -latex', dashed, line width=1pt, orange!80!black] (olympics.north) -- ++(0, 0.5) -| (init.north);
+\end{tikzpicture}
+\end{adjustbox}
+\end{center}
+\end{frame}
+
+\begin{frame}{Genetischer Algorithmus: Details}
+\begin{itemize}
+    \item \textbf{Architektur (Archipel-Modell):} Parallele Berechnung mehrerer unabhängiger Insel-Populationen mittels \texttt{multiprocessing.Pool}.
+    \item \textbf{Evolutionäre Operatoren:}
+    \begin{itemize}
+        \item \textit{Selektion:} Auswahl durch Turnier-, Rang- oder Roulette-Verfahren.
+        \item \textit{Crossover:} Rekombination von Job-Sequenzen (Order Crossover, PMX, Cycle Crossover).
+        \item \textit{Mutation \& Lokale Suche:} Inversion/Scramble sowie zielgerichtete Optimierung durch Simulated Annealing.
+    \end{itemize}
+    \item \textbf{Interaktion der Inseln:}
+    \begin{itemize}
+        \item \textit{Ring-Migration:} Die besten Individuen wandern regelmäßig zur Nachbarinsel.
+        \item \textit{Olympic Games:} Periodischer Austausch, bei dem der "Champion" auf alle Inseln kopiert wird.
+    \end{itemize}
+    \item \textbf{Dynamische Anpassung:} Erhöhung der Mutationsrate bei Stagnation; kompletter Neustart ("Retirement") von stagnierenden Inseln.
+\end{itemize}
+\end{frame}
+
+% --- Tetris RL ---
+\begin{frame}{Tetris: Reinforcement Learning}
+\begin{center}
+\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{tikzpicture}[node distance=1.5cm, auto, thick]
+    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=white, text width=7em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
+    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
+
+    \node [block] (state) {State Merkmale (11 Features)};
+    \node [block, fill=BoxFill, right=of state] (hash) {Hash-Key (64-bit)};
+    \node [block, fill=BoxTealFill, draw=HFTTeal, right=of hash] (qtable) {Q-Table (Linear Probing)};
+    \node [block, below=of qtable] (action) {Aktion $a$ (Spalte, Rotation)};
+    \node [block, left=of action] (env) {Tetris Umgebung (Board Update)};
+    \node [block, fill=orange!10, draw=orange!80!black, left=of env] (reward) {Reward Shaping};
+
+    \path [line] (state) -- (hash);
+    \path [line] (hash) -- (qtable);
+    \path [line] (qtable) -- node {$\epsilon$-Greedy} (action);
+    \path [line] (action) -- (env);
+    \path [line] (env) -- (reward);
+    \path [line] (reward) -- node {Next State $s'$} (state);
+\end{tikzpicture}
+\end{adjustbox}
+\end{center}
+\end{frame}
+
+\begin{frame}{Tetris Reinforcement Learning: Details}
+\begin{itemize}
+    \item \textbf{Umgebung \& Konzept:} Tabulares Q-Learning (implementiert in purem C).
+    \item \textbf{State \& Action Space:}
+    \begin{itemize}
+        \item Reduktion des States auf 11 Schlüsselmerkmale (z.B. max. Höhe, Löcher, aktuelle/nächste Steine).
+        \item 48 Platzierungs-Entscheidungen pro Schritt (12 Spalten $\times$ 4 Rotationen).
+    \end{itemize}
+    \item \textbf{Q-Table \& Hash-Mapping:} 
+    \begin{itemize}
+        \item Ein 64-bit Hash mappt States über "Linear Probing" auf ein float-Array der Aktionen.
+    \end{itemize}
+    \item \textbf{Reward Shaping (Belohnungssystem):}
+    \begin{itemize}
+        \item \textit{Positiv:} Linien-Abbau (+150 bis +1100), Reduktion von Höhe und "Bumpiness".
+        \item \textit{Negativ:} Entstehung neuer Löcher, hohe Gesamtbauhöhe, Game Over (-450).
+    \end{itemize}
+    \item \textbf{Training:} Bellman-Update mit $\epsilon$-Greedy Exploration und heuristischen Fallbacks für robustes Lernen.
+\end{itemize}
+\end{frame}
+
+% --- Drone Swarm ---
+\begin{frame}{Drohnen-Schwarm-Show: Architektur \& Inputs}
+\begin{center}
+\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{tikzpicture}[auto, thick]
+    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=white, text width=7.5em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
+    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
+    
+    % Absolute positioning
+    \node [block] (input) at (0, 0) {Kommandozeilen Inputs (Logos, Teams, Tore)};
+    \node [block, fill=BoxFill] (fallback) at (4.5, 1.5) {Fallback-Logik (Kreise + Kürzel)};
+    \node [block, fill=BoxFill] (imgload) at (4.5, -1.5) {Bilder laden (PNG/JPG > 1KB)};
+    
+    \node [block] (template) at (9, 0) {Template Rendering (1280x720)};
+    \node [block] (scan) at (13.5, 0) {Grid Scan ($\alpha > 80$, Schritt: $5$)};
+    
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (drone) at (13.5, -3) {Drohnen Instanziierung};
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (steer) at (9, -3) {Arrival-Steering (Reynolds)};
+    \node [block, fill=orange!10, draw=orange!80!black] (render) at (4.5, -3) {Canvas Render (60 FPS, Shimmer)};
+
+    \path [line] (input.east) -- ++(0.5,0) |- (fallback.west);
+    \path [line] (input.east) -- ++(0.5,0) |- (imgload.west);
+    
+    \path [line] (fallback.east) -| (template.north);
+    \path [line] (imgload.east) -| (template.south);
+    
+    \path [line] (template.east) -- (scan.west);
+    \path [line] (scan.south) -- (drone.north);
+    \path [line] (drone.west) -- (steer.east);
+    \path [line] (steer.west) -- (render.east);
+    
+    \path [line, dashed] (render.south) -- ++(0,-0.5) -| node[pos=0.25, below] {Next Frame Update} (steer.south);
+\end{tikzpicture}
+\end{adjustbox}
+\end{center}
+\end{frame}
+
+\begin{frame}{Drohnen-Schwarm-Show: Input \& Extraktion}
+\begin{itemize}
+    \item \textbf{Schritt 1: Kommandozeilen-Inputs parsen}
+    \begin{itemize}
+        \item Parameter: 2 Logo-Dateipfade, 2 Teamnamen, Spielstand, Titel \& Untertitel.
+        \item \textit{Default-Szenario:} Fehlen Parameter, wird automatisch das historische UEFA-Cup Finale 1989 geladen: \textbf{SSC Napoli vs. VfB Stuttgart}.
+    \end{itemize}
+    \item \textbf{Schritt 2: Fallback-Logik für fehlende Bilder}
+    \begin{itemize}
+        \item Wird ein Bild nicht gefunden oder ist korrupt ($<1$ KB), greift der Fallback.
+        \item Erzeugt einen dynamischen Farbkreis mit einem \textbf{3-Buchstaben-Kürzel} des Teamnamens (z.B. "SSC" für Napoli).
+    \end{itemize}
+    \item \textbf{Schritt 3: Grid Scan \& Farbextraktion}
+    \begin{itemize}
+        \item Logos und dynamisch skalierte Schriften werden intern auf ein $1280 \times 720$ Template gerendert.
+        \item Abtastung in $5\times 5$ Pixel großen Schritten (\texttt{SAMPLE\_STEP = 5}).
+        \item Eine Drohne wird nur generiert, wenn die Deckkraft \textbf{Alpha $>$ 80} ist.
+        \item \textit{Korrektur:} Sehr dunkle Pixel ($R,G,B < 30$) werden leicht bläulich aufgehellt ($50,50,70$), um am schwarzen Nachthimmel sichtbar zu bleiben.
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Drohnen-Schwarm-Show: Vektormathematik}
+\begin{itemize}
+    \item \textbf{Startbedingungen:} Zufälliges Delay (bis zu 200 Frames) \& Streuung am unteren Bildschirmrand für einen organischen Launch.
+    \item \textbf{Arrival-Steering Behavior (nach Craig Reynolds):}
+    \begin{itemize}
+        \item \textit{Distanzvektor:} $\vec{d} = \vec{x}_{\text{target}} - \vec{x}_{\text{current}}$ mit absoluter Distanz $D = |\vec{d}|$.
+        \item \textit{Geschwindigkeit drosseln:} Falls $D < \text{arrivalRadius}$ (100px), wird proportional abgebremst: $v_{\text{desired}} = v_{\text{max}} \cdot (D / \text{arrivalRadius})$. Ansonsten $v_{\text{desired}} = v_{\text{max}}$.
+        \item \textit{Lenkkraft (Steer Force):} $\vec{f} = \left(\frac{\vec{d}}{D}\right) v_{\text{desired}} - \vec{v}_{\text{current}}$. Die Kraft wird auf $\text{maxForce}$ ($0.12$) limitiert.
+        \item \textit{Update:} Geschwindigkeit wird aktualisiert ($\vec{v} = \vec{v} + \vec{f}$) und durch das Limit $v_{\text{max}}=3.5$ gedeckelt.
+    \end{itemize}
+    \item \textbf{Visualisierung \& Shimmer-Effekt (60 FPS):}
+    \begin{itemize}
+        \item Farben interpolieren sich sanft von "Warmweiß" beim Start zur Zielfarbe.
+        \item Nach Ankunft am Ziel aktiviert sich ein \textbf{Sinus-Flackern} pro Drohne: \\ $RGB_{\text{out}} = RGB_{\text{target}} \cdot (0.88 + 0.12 \cdot \sin(\text{frame} \cdot 0.04 + \text{phase}))$.
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% --- Blackjack NN ---
+\begin{frame}{Blackjack: Neuronales Netz}
+\begin{center}
+\begin{adjustbox}{max width=0.85\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{tikzpicture}[node distance=2cm, thick]
+    % Input Layer
+    \node[circle, draw=BoxOutline, fill=white, minimum size=1cm, line width=1pt] (i1) at (0, 3) {};
+    \node[circle, draw=BoxOutline, fill=white, minimum size=1cm, line width=1pt] (i2) at (0, 1.5) {};
+    \node[circle, draw=BoxOutline, fill=white, minimum size=1cm, line width=1pt] (i3) at (0, 0) {};
+    \node at (0, -1) {$\vdots$};
+    \node[circle, draw=BoxOutline, fill=white, minimum size=1cm, line width=1pt] (i7) at (0, -2) {};
+    \node[above=0.3cm of i1] {\textbf{Input (7 Features)}};
+
+    % Hidden Layer
+    \node[circle, draw=HFTTeal, fill=BoxTealFill, minimum size=1cm, line width=1pt] (h1) at (4, 3.5) {};
+    \node[circle, draw=HFTTeal, fill=BoxTealFill, minimum size=1cm, line width=1pt] (h2) at (4, 2) {};
+    \node[circle, draw=HFTTeal, fill=BoxTealFill, minimum size=1cm, line width=1pt] (h3) at (4, 0.5) {};
+    \node at (4, -0.8) {$\vdots$};
+    \node[circle, draw=HFTTeal, fill=BoxTealFill, minimum size=1cm, line width=1pt] (h16) at (4, -2.5) {};
+    \node[above=0.3cm of h1] {\textbf{Hidden Layer (16, ReLU)}};
+
+    % Output Layer
+    \node[circle, draw=orange!80!black, fill=orange!10, minimum size=1cm, text=black, line width=1pt] (o1) at (8, 1.5) {\textbf{Hit}};
+    \node[circle, draw=orange!80!black, fill=orange!10, minimum size=1cm, text=black, line width=1pt] (o2) at (8, -0.5) {\textbf{Stand}};
+    \node[above=1.3cm of o1] {\textbf{Output (2, Softmax)}};
+
+    % Connections (Sample)
+    \draw[->, color=HFTBlue!50, line width=1pt] (i1) -- (h1); \draw[->, color=HFTBlue!50, line width=1pt] (i1) -- (h2);
+    \draw[->, color=HFTBlue!50, line width=1pt] (i2) -- (h2); \draw[->, color=HFTBlue!50, line width=1pt] (i3) -- (h3);
+    \draw[->, color=HFTBlue!50, line width=1pt] (i7) -- (h16);
+    
+    \draw[->, color=HFTTeal!50, line width=1pt] (h1) -- (o1); \draw[->, color=HFTTeal!50, line width=1pt] (h1) -- (o2);
+    \draw[->, color=HFTTeal!50, line width=1pt] (h2) -- (o1); \draw[->, color=HFTTeal!50, line width=1pt] (h16) -- (o2);
+\end{tikzpicture}
+\end{adjustbox}
+\end{center}
+\end{frame}
+
+\begin{frame}{Blackjack Neuronales Netz: Details}
+\begin{itemize}
+    \item \textbf{Architektur:} Ein in C geschriebenes Feedforward Neuronales Netz ($7 \rightarrow 16 \rightarrow 2$).
+    \item \textbf{Inputs (7 normierte Features):}
+    \begin{itemize}
+        \item Player Total, Usable Ace, Dealer Upcard, Busted Flag, Terminal Flag, Running Count, True Count.
+    \end{itemize}
+    \item \textbf{Aufbau der Schichten:}
+    \begin{itemize}
+        \item \textit{Hidden Layer:} 16 Neuronen, aktiviert durch ReLU ($max(0, x)$).
+        \item \textit{Output Layer:} 2 Logits für "Hit" und "Stand", umgewandelt in Wahrscheinlichkeiten durch eine Softmax-Funktion.
+    \end{itemize}
+    \item \textbf{Training (Supervised Learning):}
+    \begin{itemize}
+        \item Berechnung des Fehlers über Cross-Entropy Loss ($L = -\log P(\text{Target})$).
+        \item Backpropagation der Gradienten und Aktualisierung der Gewichte durch Stochastic Gradient Descent (SGD).
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% --- F1 RL ---
+\begin{frame}{F1 AI Racing: Neuroevolution}
+\begin{center}
+\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{tikzpicture}[auto, thick]
+    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=white, text width=7.5em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
+    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
+
+    % Absolute positioning
+    \node [block] (sensors) at (0, 0) {Laser Sensoren (Raycasting)};
+    \node [block] (radar) at (0, -2) {Checkpoint Radar};
+    \node [block, fill=BoxFill] (nn) at (4.5, -1) {Neuronales Netz ($16 \rightarrow 2$)};
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (gas) at (9, 0.5) {Gas/Bremse (Sigmoid)};
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (steer) at (9, -2.5) {Lenkung (Tanh)};
+
+    \node [block, fill=orange!10, draw=orange!80!black] (fitness) at (4.5, -4.5) {Fitness Evaluierung};
+    \node [block, fill=orange!10, draw=orange!80!black] (ga) at (9, -4.5) {Evolution (80/20)};
+
+    % Forward Edges
+    \path [line] (sensors.east) -- (nn.west);
+    \path [line] (radar.east) -- (nn.west);
+    \path [line] (nn.east) -- (gas.west);
+    \path [line] (nn.east) -- (steer.west);
+    
+    % Dashed Feedback/Evaluation Edges
+    % Routing around the right side to prevent crossing!
+    \path [line, dashed] (gas.east) -- ++(0.5,0) |- (fitness.east);
+    \path [line, dashed] (steer.east) -- ++(0.5,0) |- (fitness.east);
+    \path [line] (fitness.east) -- (ga.west);
+    
+    % Return Edge for the loop
+    \path [line] (ga.south) -- ++(0,-0.5) -| node[pos=0.25, below] {Neues Netz} (nn.south);
+\end{tikzpicture}
+\end{adjustbox}
+\end{center}
+\end{frame}
+
+\begin{frame}{F1 AI Racing: Details}
+\begin{itemize}
+    \item \textbf{Das Konzept:} Kombination von Neuronalen Netzen mit Genetischen Algorithmen (ähnlich NEAT). Fahrzeuge erlernen die Steuerung komplett autark über Generationen hinweg.
+    \item \textbf{Sensorik (16 Inputs):}
+    \begin{itemize}
+        \item 7 Laser-Sensoren messen Entfernungen zu Streckenbegrenzungen (Raycasting).
+        \item Mathematisches Radar peilt den nächsten Checkpoint an (Distanz \& Winkel per \texttt{arctan2}).
+    \end{itemize}
+    \item \textbf{Fahrphysik:}
+    \begin{itemize}
+        \item Berücksichtigung von Reibung und Grip-Verlust bei hoher Geschwindigkeit (Untersteuern).
+        \item \textit{Windschatten-Effekt (Slipstream \& Dirty Air):} Extrapush im Sog des Vordermanns, abgeschwächt in Kurven.
+    \end{itemize}
+    \item \textbf{Fitness \& Selektion:}
+    \begin{itemize}
+        \item Die besten 20\% einer Generation überleben ("Survival of the Fittest").
+        \item Komplexe Fitnessbewertung (Punkte für Checkpoints, Überholen \& Überlebenszeit; massiver Abzug bei Crashes).
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\end{document}
