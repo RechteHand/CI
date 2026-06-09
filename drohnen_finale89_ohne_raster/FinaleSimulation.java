@@ -38,7 +38,6 @@ public class FinaleSimulation extends JFrame implements Runnable {
     String untertitel;
 
     ArrayList<Drohne> drohnen = new ArrayList<>();
-    SpatialGrid grid = new SpatialGrid(3000, 2000, 30);
     SkyCanvas canvas;
     int frame = 0;
 
@@ -310,13 +309,9 @@ public class FinaleSimulation extends JFrame implements Runnable {
         while (true) {
             long start = System.currentTimeMillis();
             frame++;
-            grid.clear();
+            
             for (Drohne d : drohnen) {
-                if (d.launched) grid.insert(d);
-            }
-
-            for (Drohne d : drohnen) {
-                d.update(frame, grid);
+                d.update(frame, drohnen);
             }
 
             canvas.repaint();

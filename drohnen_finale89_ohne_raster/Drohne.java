@@ -59,7 +59,7 @@ public class Drohne {
     /**
      * Steering-Update pro Frame: Arrival-Behavior, Separation & Signaling.
      */
-    void update(int frame, SpatialGrid grid) {
+    void update(int frame, ArrayList<Drohne> alleDrohnen) {
         if (frame < launchDelay) return;
         launched = true;
 
@@ -108,7 +108,7 @@ public class Drohne {
         // --- 2. Signal Reaktion (Evade) ---
         double evadeX = 0, evadeY = 0;
 
-        for (Drohne other : grid.getNeighbors(x, y)) {
+        for (Drohne other : alleDrohnen) {
             if (other == this || !other.launched) continue;
             
             double ox = x - other.x;
