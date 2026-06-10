@@ -83,185 +83,252 @@
 \end{frame}
 
 % --- Genetic Algorithm ---
-\begin{frame}{Genetischer Algorithmus: Architektur}
+\begin{frame}{Genetischer Algorithmus: Grundidee des Inselmodells}
+\begin{columns}[T]
+\footnotesize
+\begin{column}{0.5\textwidth}
+\textbf{Konzept der unabhängigen Inseln}
+\begin{itemize}
+    \item Mehrere unabhängige Populationen statt einer einzigen.
+    \item Jede Insel besitzt eine \textbf{eigene Kultur} (Konfiguration, Selektion, Crossover, Mutation).
+    \item Parallele Suchprozesse auf mehreren CPU-Kernen (Multithreading).
+\end{itemize}
+\textbf{Insel-Zyklus (wiederholt):} 1. Selektion $\rightarrow$ 2. Crossover $\rightarrow$ 3. Mutation $\rightarrow$ 4. Lokale Suche $\rightarrow$ 5. Elitismus.
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\textbf{Warum ein Inselmodell?}
+\begin{itemize}
+    \item \textcolor{HFTTeal}{\textbf{Vorteile:}} Reduziert Gefahr früher Konvergenz, erhält mehrere Suchrichtungen, erhöht genetische Diversität.
+\end{itemize}
+\textbf{Wichtige Implementierungsentscheidung}
+\begin{itemize}
+    \item Jede Insel verwendet unterschiedliche Operatoren (z.\,B. Tournament vs. Roulette, PMX vs. Order Crossover).
+    \item \textcolor{HFTTeal}{\textbf{Begründung:}} Es existiert kein universell bester genetischer Operator. Durch die parallele Verwendung können unterschiedliche Bereiche des Suchraums effizienter untersucht werden.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Genetischer Algorithmus: Generationswechsel}
+\begin{columns}[T]
+\footnotesize
+\begin{column}{0.5\textwidth}
+\textbf{Erzeugung einer neuen Generation}
+\begin{itemize}
+    \item \textbf{Ablauf:} 1. Elitismus (Bestes Individuum), 2. Elternwahl, 3. Crossover, 4. Mutation ($p_m$), 5. Lokale Suche ($p_{ls}$), 6. Fitness berechnen.
+\end{itemize}
+\textbf{Warum Elitismus?}
+\begin{itemize}
+    \item Bereits gefundene gute Lösungen gehen niemals verloren. Stabilisiert den Suchprozess.
+\end{itemize}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\textbf{Adaptive Mutationsrate}
+\begin{itemize}
+    \item \textcolor{HFTTeal}{\textbf{Auslöser:}} Sinkt die Diversität oder stagniert die Fitness, wird die Mutationsrate automatisch erhöht.
+    \item \textcolor{HFTTeal}{\textbf{Ziel:}} Dynamischer Kompromiss zwischen Exploration und Exploitation.
+\end{itemize}
+\textbf{Lokale Suche (Memetic Algorithm)}
+\begin{itemize}
+    \item \textbf{Operationen:} Positionen tauschen, Segmente mischen, Neustarts, Akzeptanz schlechterer Lösungen (Simulated Annealing).
+    \item \textcolor{HFTTeal}{\textbf{Begründung:}} Genetische Operatoren für globale Suche, gepaart mit lokaler Suche zur gezielten Verfeinerung vielversprechender Lösungen.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Genetischer Algorithmus: Migration \& Olympia}
+\begin{columns}[c]
+\footnotesize
+\begin{column}{0.55\textwidth}
+\textbf{Migration \& Olympische Spiele}
+\begin{itemize}
+    \item \textbf{Ring-Migration:} Weitergabe der besten Individuen im festen Intervall. Gute Lösungen verbreiten sich im Archipel.
+    \item \textbf{Olympische Spiele:} Globale Wettkämpfe der Insel-Champions. Gewinner wird auf alle Inseln kopiert.
+\end{itemize}
+\textbf{Selbstanpassung}
+\begin{itemize}
+    \item \textbf{Inselsterben \& Wiedergeburt:} Bei langer Stagnation stirbt eine Insel und wird mit neuen, zufälligen Parametern neu erzeugt.
+    \item \textbf{Mehrstufige Adaptivität:} Individuum (Mutation, Lokale Suche), Population (Migration, Diversität), Insel (Wiedergeburt, Parameter).
+\end{itemize}
+
+\vspace{0cm}
+\textcolor{HFTTeal}{\scriptsize \textbf{Bestes gefundenes Ergebnis (Makespan):} 157724}
+\end{column}
+
+\begin{column}{0.45\textwidth}
 \begin{center}
-\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
-\begin{tikzpicture}[auto, thick]
-    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=BoxFill, text width=7.5em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
-    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
+\begin{adjustbox}{max width=\textwidth, max height=0.75\paperheight, keepaspectratio}
+\begin{tikzpicture}[auto, thick,
+    island/.style={ellipse, draw=HFTTeal, fill=BoxTealFill, text width=1.6cm, text centered, minimum height=1.0cm, line width=1.5pt, font=\bfseries\small},
+    water/.style={circle, draw=HFTBlue, fill=BoxFill, minimum size=5.5cm, dashed, line width=1pt}
+]
+    % Background "Ocean"
+    \node[water] (ocean) at (0,0) {};
 
-    % Main Loop Nodes (Rectangle Layout)
-    \node [block] (eval) at (0, 0) {Fitness prüfen (Makespan)};
-    \node [block] (init) at (0, 2.5) {Initialisierung (Inseln)};
-    \node [block] (select) at (0, -2.5) {Selektion (Turnier, Rang)};
-    \node [block] (cross) at (4.5, -2.5) {Crossover (OX, PMX, CX)};
-    \node [block] (mut) at (9, -2.5) {Mutation (Inversion, Scramble)};
-    \node [block] (local) at (9, 0) {Local Search (Sim. Annealing)};
+    % Islands arranged in a circle
+    \node[island] (i1) at (0, 1.8) {Insel A\\ \scriptsize(Kultur A)};
+    \node[island] (i2) at (1.8, -1.0) {Insel B\\ \scriptsize(Kultur B)};
+    \node[island] (i3) at (-1.8, -1.0) {Insel C\\ \scriptsize(Kultur C)};
 
-    % Special Nodes
-    \node [block, fill=BoxTealFill, draw=HFTTeal] (migrate) at (4.5, 2.5) {Ring-Migration};
-    \node [block, fill=orange!10, draw=orange!80!black] (olympics) at (9, 2.5) {Olympic Games};
+    % Ring Migration (Arrows)
+    \draw[-latex', line width=1.5pt, HFTBlue, bend left=30] (i1) to node[right=0.1cm, font=\scriptsize] {Migration} (i2);
+    \draw[-latex', line width=1.5pt, HFTBlue, bend left=30] (i2) to node[below, font=\scriptsize] {Migration} (i3);
+    \draw[-latex', line width=1.5pt, HFTBlue, bend left=30] (i3) to node[left=0.1cm, font=\scriptsize] {Migration} (i1);
 
-    % Main Loop Edges
-    \path [line] (init) -- (eval);
-    \path [line] (eval) -- (select);
-    \path [line] (select) -- (cross);
-    \path [line] (cross) -- (mut);
-    \path [line] (mut) -- (local);
-    \path [line] (local) -- (eval);
+    % Olympic Games in the center
+    \begin{scope}[shift={(0, 0.4)}, scale=0.25, line width=1.5pt]
+      \draw[HFTBlue] (-2.2,0) circle (1);
+      \draw[black] (0,0) circle (1);
+      \draw[red] (2.2,0) circle (1);
+      \draw[orange] (-1.1,-1) circle (1);
+      \draw[HFTTeal] (1.1,-1) circle (1);
+    \end{scope}
+    \node[font=\bfseries\scriptsize, text=orange!80!black] at (0, -0.3) {Olympia};
 
-    % Dashed lines for special operations (using xshift to avoid overlap)
-    \path [draw, -latex', dashed, line width=1pt, HFTTeal] ([xshift=-0.5cm]local.north) |- (migrate.east);
-    \path [draw, -latex', dashed, line width=1pt, orange!80!black] ([xshift=0.5cm]local.north) -- ([xshift=0.5cm]olympics.south);
+    % Champions going to Olympics
+    \draw[-latex', dashed, line width=1.2pt, orange!80!black] (i1) -- (0, 0.9);
+    \draw[-latex', dashed, line width=1.2pt, orange!80!black] (i2) -- (0.6, -0.3);
+    \draw[-latex', dashed, line width=1.2pt, orange!80!black] (i3) -- (-0.6, -0.3);
     
-    % Return paths from special operations to the init phase
-    \path [draw, -latex', dashed, line width=1pt, HFTTeal] (migrate.west) -- (init.east);
-    \path [draw, -latex', dashed, line width=1pt, orange!80!black] (olympics.north) -- ++(0, 0.5) -| (init.north);
+    % Rebirth event
+    \node[align=center, font=\scriptsize, text=red!80!black] (death) at (-2.2, 1.8) {\textbf{Wieder-}\\ \textbf{geburt}};
+    \draw[-latex', dashed, red!80!black, line width=1pt] (death) -- (i1);
+
 \end{tikzpicture}
 \end{adjustbox}
 \end{center}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Genetischer Algorithmus: Details}
-\begin{itemize}
-    \item \textbf{Architektur (Archipel-Modell):} Parallele Berechnung mehrerer unabhängiger Insel-Populationen mittels \texttt{multiprocessing.Pool}.
-    \item \textbf{Evolutionäre Operatoren:}
-    \begin{itemize}
-        \item \textit{Selektion:} Auswahl durch Turnier-, Rang- oder Roulette-Verfahren.
-        \item \textit{Crossover:} Rekombination von Job-Sequenzen (Order Crossover, PMX, Cycle Crossover).
-        \item \textit{Mutation \& Lokale Suche:} Inversion/Scramble sowie zielgerichtete Optimierung durch Simulated Annealing.
-    \end{itemize}
-    \item \textbf{Interaktion der Inseln:}
-    \begin{itemize}
-        \item \textit{Ring-Migration:} Die besten Individuen wandern regelmäßig zur Nachbarinsel.
-        \item \textit{Olympic Games:} Periodischer Austausch, bei dem der "Champion" auf alle Inseln kopiert wird.
-    \end{itemize}
-    \item \textbf{Dynamische Anpassung:} Erhöhung der Mutationsrate bei Stagnation; kompletter Neustart ("Retirement") von stagnierenden Inseln.
-\end{itemize}
-\end{frame}
-
-% --- Tetris RL ---
-\begin{frame}{Tetris: Reinforcement Learning}
-\begin{center}
-\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
-\begin{tikzpicture}[node distance=1.5cm, auto, thick]
-    \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=white, text width=7em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
-    \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
-
-    \node [block] (state) {State Merkmale (11 Features)};
-    \node [block, fill=BoxFill, right=of state] (hash) {Hash-Key (64-bit)};
-    \node [block, fill=BoxTealFill, draw=HFTTeal, right=of hash] (qtable) {Q-Table (Linear Probing)};
-    \node [block, below=of qtable] (action) {Aktion $a$ (Spalte, Rotation)};
-    \node [block, left=of action] (env) {Tetris Umgebung (Board Update)};
-    \node [block, fill=orange!10, draw=orange!80!black, left=of env] (reward) {Reward Shaping};
-
-    \path [line] (state) -- (hash);
-    \path [line] (hash) -- (qtable);
-    \path [line] (qtable) -- node {$\epsilon$-Greedy} (action);
-    \path [line] (action) -- (env);
-    \path [line] (env) -- (reward);
-    \path [line] (reward) -- node {Next State $s'$} (state);
-\end{tikzpicture}
-\end{adjustbox}
-\end{center}
-\end{frame}
-
-\begin{frame}{Tetris Reinforcement Learning: Details}
-\begin{itemize}
-    \item \textbf{Umgebung \& Konzept:} Tabulares Q-Learning (implementiert in purem C).
-    \item \textbf{State \& Action Space:}
-    \begin{itemize}
-        \item Reduktion des States auf 11 Schlüsselmerkmale (z.B. max. Höhe, Löcher, aktuelle/nächste Steine).
-        \item 48 Platzierungs-Entscheidungen pro Schritt (12 Spalten $\times$ 4 Rotationen).
-    \end{itemize}
-    \item \textbf{Q-Table \& Hash-Mapping:} 
-    \begin{itemize}
-        \item Ein 64-bit Hash mappt States über "Linear Probing" auf ein float-Array der Aktionen.
-    \end{itemize}
-    \item \textbf{Reward Shaping (Belohnungssystem):}
-    \begin{itemize}
-        \item \textit{Positiv:} Linien-Abbau (+150 bis +1100), Reduktion von Höhe und "Bumpiness".
-        \item \textit{Negativ:} Entstehung neuer Löcher, hohe Gesamtbauhöhe, Game Over (-450).
-    \end{itemize}
-    \item \textbf{Training:} Bellman-Update mit $\epsilon$-Greedy Exploration und heuristischen Fallbacks für robustes Lernen.
-\end{itemize}
-\end{frame}
 
 % --- Drone Swarm ---
-\begin{frame}{Drohnen-Schwarm-Show: Architektur \& Inputs}
+\begin{frame}{Drohnen Fußball-Show: Grundidee \& Ablauf}
+\textbf{Grundidee:} Reale Fußball-Ergebnisse beliebiger Vereine als beeindruckende Drohnen-Formation am Nachthimmel simulieren.
+
+\vspace{0.2cm}
 \begin{center}
-\begin{adjustbox}{max width=0.95\textwidth, max height=0.65\paperheight, keepaspectratio}
+\begin{adjustbox}{max width=0.95\textwidth, max height=0.55\paperheight, keepaspectratio}
 \begin{tikzpicture}[auto, thick]
     \tikzstyle{block} = [rectangle, draw=BoxOutline, fill=white, text width=7.5em, text centered, rounded corners, minimum height=3.5em, line width=1pt]
     \tikzstyle{line} = [draw, -latex', line width=1.2pt, BoxOutline]
     
-    % Absolute positioning
-    \node [block] (input) at (0, 0) {Kommandozeilen Inputs (Logos, Teams, Tore)};
-    \node [block, fill=BoxFill] (fallback) at (4.5, 1.5) {Fallback-Logik (Kreise + Kürzel)};
-    \node [block, fill=BoxFill] (imgload) at (4.5, -1.5) {Bilder laden (PNG/JPG > 1KB)};
+    \node [block] (input) at (0, 0.5) {Kommandozeilen Inputs (Logos, Teams)};
     
-    \node [block] (template) at (9, 0) {Template Rendering (1280x720)};
-    \node [block] (scan) at (13.5, 0) {Grid Scan ($\alpha > 80$, Schritt: $5$)};
+    \node [block, fill=orange!10, draw=orange!80!black] (hist_fallback) at (4.5, 3) {Keine Parameter:\\ Fallback auf Finale 1989 (VfB vs Napoli)};
+    \node [block, fill=BoxFill] (fallback) at (4.5, 0.5) {Falsche Pfade:\\ Fallback-Logik (Kreise + Kürzel)};
+    \node [block, fill=BoxFill] (imgload) at (4.5, -2) {Korrekte Pfade:\\ Bilder laden};
     
-    \node [block, fill=BoxTealFill, draw=HFTTeal] (drone) at (13.5, -3) {Drohnen Instanziierung};
-    \node [block, fill=BoxTealFill, draw=HFTTeal] (steer) at (9, -3) {Arrival-Steering (Reynolds)};
-    \node [block, fill=orange!10, draw=orange!80!black] (render) at (4.5, -3) {Canvas Render (60 FPS, Shimmer)};
+    \node [block] (template) at (9, 0.5) {Template Rendering (1280x720)};
+    \node [block] (scan) at (13.5, 0.5) {Grid Scan ($\alpha > 80$)};
+    
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (drone) at (13.5, -4) {Drohnen Instanziierung};
+    \node [block, fill=BoxTealFill, draw=HFTTeal] (steer) at (9, -4) {Arrival-Steering (Reynolds)};
+    \node [block, fill=HFTBlue!10, draw=HFTBlue] (render) at (4.5, -4) {Canvas Render (60 FPS)};
 
-    \path [line] (input.east) -- ++(0.5,0) |- (fallback.west);
+    \path [line] (input.east) -- ++(0.5,0) |- (hist_fallback.west);
+    \path [line] (input.east) -- (fallback.west);
     \path [line] (input.east) -- ++(0.5,0) |- (imgload.west);
     
-    \path [line] (fallback.east) -| (template.north);
+    \path [line] (hist_fallback.east) -| (template.north);
+    \path [line] (fallback.east) -- (template.west);
     \path [line] (imgload.east) -| (template.south);
     
     \path [line] (template.east) -- (scan.west);
     \path [line] (scan.south) -- (drone.north);
     \path [line] (drone.west) -- (steer.east);
     \path [line] (steer.west) -- (render.east);
-    
-    \path [line, dashed] (render.south) -- ++(0,-0.5) -| node[pos=0.25, below] {Next Frame Update} (steer.south);
 \end{tikzpicture}
 \end{adjustbox}
 \end{center}
 \end{frame}
 
-\begin{frame}{Drohnen-Schwarm-Show: Input \& Extraktion}
+\begin{frame}{Drohnen Fußball-Show: Zuweisung von Farbe \& Koordinaten}
+\textbf{Das "Malen nach Zahlen"-Prinzip:} Das Bild wird auf ein unsichtbares Raster gelegt. Jede Farb-Zelle entspricht genau \textbf{einer} Drohne.
+\vspace{0.3cm}
+
+\begin{columns}[c]
+\begin{column}{0.4\textwidth}
+\begin{center}
+\begin{tikzpicture}[scale=0.6, thick]
+    % Draw Grid
+    \draw[step=1cm, gray!40, thin] (0,0) grid (5,5);
+    
+    % Fictional Logo (A simple "A" shape or cross)
+    \fill[HFTBlue, opacity=0.8] (2,1) rectangle (3,4);
+    \fill[HFTBlue, opacity=0.8] (1,2) rectangle (4,3);
+    \fill[HFTTeal, opacity=0.9] (2,2) rectangle (3,3); % Center point different color
+    
+    % Highlight one specific square
+    \draw[red, line width=1.5pt] (1,2) rectangle (2,3);
+    \node[red] at (1.5, 2.5) {\textbf{+}};
+    
+    \draw[orange, line width=1.5pt] (2,2) rectangle (3,3);
+    \node[orange] at (2.5, 2.5) {\textbf{+}};
+\end{tikzpicture}
+\end{center}
+\end{column}
+
+\begin{column}{0.1\textwidth}
+\begin{center}
+\begin{tikzpicture}
+    \draw[-latex', line width=2pt, gray] (0,0) -- (1,0);
+\end{tikzpicture}
+\end{center}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\footnotesize
 \begin{itemize}
-    \item \textbf{Schritt 1: Kommandozeilen-Inputs parsen}
-    \begin{itemize}
-        \item Parameter: 2 Logo-Dateipfade, 2 Teamnamen, Spielstand, Titel \& Untertitel.
-        \item \textit{Default-Szenario:} Fehlen Parameter, wird automatisch das historische UEFA-Cup Finale 1989 geladen: \textbf{SSC Napoli vs. VfB Stuttgart}.
-    \end{itemize}
-    \item \textbf{Schritt 2: Fallback-Logik für fehlende Bilder}
-    \begin{itemize}
-        \item Wird ein Bild nicht gefunden oder ist korrupt ($<1$ KB), greift der Fallback.
-        \item Erzeugt einen dynamischen Farbkreis mit einem \textbf{3-Buchstaben-Kürzel} des Teamnamens (z.B. "SSC" für Napoli).
-    \end{itemize}
-    \item \textbf{Schritt 3: Grid Scan \& Farbextraktion}
-    \begin{itemize}
-        \item Logos und dynamisch skalierte Schriften werden intern auf ein $1280 \times 720$ Template gerendert.
-        \item Abtastung in $5\times 5$ Pixel großen Schritten (\texttt{SAMPLE\_STEP = 5}).
-        \item Eine Drohne wird nur generiert, wenn die Deckkraft \textbf{Alpha $>$ 80} ist.
-        \item \textit{Korrektur:} Sehr dunkle Pixel ($R,G,B < 30$) werden leicht bläulich aufgehellt ($50,50,70$), um am schwarzen Nachthimmel sichtbar zu bleiben.
-    \end{itemize}
+    \item \textbf{Schritt 1 (Raster):} Bild wird in ein festes Gitter (Grid) unterteilt.
+    \item \textbf{Schritt 2 (Prüfung):} Ist die Zelle transparent? $\rightarrow$ Ignorieren. Enthält sie Farbe? $\rightarrow$ Drohne erzeugen!
 \end{itemize}
+\vspace{0.1cm}
+\begin{center}
+\begin{tikzpicture}[
+    dronebox/.style={rectangle, draw=gray, fill=white, rounded corners, text width=2.8cm, inner sep=3pt, font=\scriptsize}
+]
+    \node[dronebox, draw=red, thick] (d1) at (0, 0) {\textbf{Drohne 1}\\ \textbf{Ziel-X:} 150 \\ \textbf{Ziel-Y:} 250 \\ \textbf{Farbe:} HFTBlue};
+    
+    \node[dronebox, draw=orange, thick] (d2) at (3.5, 0) {\textbf{Drohne 2}\\ \textbf{Ziel-X:} 250 \\ \textbf{Ziel-Y:} 250 \\ \textbf{Farbe:} HFTTeal};
+\end{tikzpicture}
+\end{center}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Drohnen-Schwarm-Show: Vektormathematik}
+\begin{frame}{Drohnen Fußball-Show: Physik \& Kollisionsvermeidung}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\footnotesize
+\textbf{1. Separation (Abstoßung)}
 \begin{itemize}
-    \item \textbf{Startbedingungen:} Zufälliges Delay (bis zu 200 Frames) \& Streuung am unteren Bildschirmrand für einen organischen Launch.
-    \item \textbf{Arrival-Steering Behavior (nach Craig Reynolds):}
-    \begin{itemize}
-        \item \textit{Distanzvektor:} $\vec{d} = \vec{x}_{\text{target}} - \vec{x}_{\text{current}}$ mit absoluter Distanz $D = |\vec{d}|$.
-        \item \textit{Geschwindigkeit drosseln:} Falls $D < \text{arrivalRadius}$ (100px), wird proportional abgebremst: $v_{\text{desired}} = v_{\text{max}} \cdot (D / \text{arrivalRadius})$. Ansonsten $v_{\text{desired}} = v_{\text{max}}$.
-        \item \textit{Lenkkraft (Steer Force):} $\vec{f} = \left(\frac{\vec{d}}{D}\right) v_{\text{desired}} - \vec{v}_{\text{current}}$. Die Kraft wird auf $\text{maxForce}$ ($0.12$) limitiert.
-        \item \textit{Update:} Geschwindigkeit wird aktualisiert ($\vec{v} = \vec{v} + \vec{f}$) und durch das Limit $v_{\text{max}}=3.5$ gedeckelt.
-    \end{itemize}
-    \item \textbf{Visualisierung \& Shimmer-Effekt (60 FPS):}
-    \begin{itemize}
-        \item Farben interpolieren sich sanft von "Warmweiß" beim Start zur Zielfarbe.
-        \item Nach Ankunft am Ziel aktiviert sich ein \textbf{Sinus-Flackern} pro Drohne: \\ $RGB_{\text{out}} = RGB_{\text{target}} \cdot (0.88 + 0.12 \cdot \sin(\text{frame} \cdot 0.04 + \text{phase}))$.
-    \end{itemize}
+    \item Drohnen stoßen sich ab, wenn sie den Mindestabstand $d$ unterschreiten.
+    \item \textbf{Vektor-Formel:} $\vec{F}_{sep} = \frac{\vec{pos}_{this} - \vec{pos}_{other}}{d^2}$
+    \item Die Abstoßungskraft ist umgekehrt proportional zur quadrierten Distanz.
 \end{itemize}
+\textbf{Spatial Partitioning (Optimierung)}
+\begin{itemize}
+    \item Um nicht jede Drohne mit allen anderen zu vergleichen ($O(N^2)$), wird der Raum in ein \textbf{SpatialGrid} unterteilt.
+    \item Jede Drohne prüft nur ihre direkten Nachbar-Zellen $\rightarrow$ \textbf{Komplexität $O(N)$}.
+\end{itemize}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\footnotesize
+\textbf{2. Blockaden \& Hilfsvektoren}
+\begin{itemize}
+    \item \textbf{Problem:} Fliegende Drohne bleibt in geparkten Drohnen stecken ($speed \approx 0$).
+    \item \textbf{Notsignal:} Blockierte Drohne pulsiert rot und sendet Signal ($\vec{pos}_{broadcaster}$).
+    \item \textbf{Evade-Vektor (Platz machen):}\\
+    $\vec{F}_{evade} = \left(\frac{\vec{pos}_{this} - \vec{pos}_{broadcaster}}{d}\right) \times C$
+    \item Geparkte Drohnen wachen auf, berechnen Fluchtvektor $\vec{F}_{evade}$ und schieben sich kurz zur Seite. Lücke entsteht!
+\end{itemize}
+\end{column}
+\end{columns}
 \end{frame}
 
 % --- Blackjack NN ---
