@@ -4,7 +4,6 @@
 cat_vs_dog_classification/dataset/
 cat_vs_dog_classification/*.zip
 cat_vs_dog_classification/*.tgz
-skills/
 # macOS
 .DS_Store
 
