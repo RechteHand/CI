@@ -1,6 +1,10 @@
 # Compiled Java class files
 *.class
-
+# Ignoriere Bilder-Datensatz und Archive im Klassifikations-Ordner
+cat_vs_dog_classification/dataset/
+cat_vs_dog_classification/*.zip
+cat_vs_dog_classification/*.tgz
+skills/
 # macOS
 .DS_Store
 
