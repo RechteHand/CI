@@ -39,11 +39,22 @@ Der Code befindet sich im Ordner `nn_zur_klassifikation` und ist streng in klein
 
 ## Wie man das Projekt startet
 
-**1. Datensatz herunterladen (Optional):**
-Falls du den Datensatz noch nicht hast, führe das Skript `download_dataset.py` aus. Es lädt ca. 7000 Bilder von Katzen und Hunden herunter und sortiert sie in die Ordner `dataset/cats` und `dataset/dogs`.
+**1. Datensatz herunterladen:**
+Dieses Netz basiert auf dem bekannten "Cats vs Dogs" Datensatz (wir nutzen das offiziell gefilterte Subset von Google/Kaggle mit ca. 3000-4000 Bildern, da es schneller lädt).
+
+Um die Bilder zu laden und korrekt zu strukturieren, führe einfach folgende Befehle in deinem Terminal (im Ordner `cat_vs_dog_classification`) aus:
+
 ```bash
-python3 download_dataset.py
+curl -o cats_and_dogs.zip https://storage.googleapis.com/mledu-datasets/cats_and_dogs_filtered.zip
+unzip -q cats_and_dogs.zip
+mkdir -p dataset/cats dataset/dogs
+mv cats_and_dogs_filtered/train/cats/* dataset/cats/
+mv cats_and_dogs_filtered/train/dogs/* dataset/dogs/
+mv cats_and_dogs_filtered/validation/cats/* dataset/cats/
+mv cats_and_dogs_filtered/validation/dogs/* dataset/dogs/
+rm -rf cats_and_dogs_filtered cats_and_dogs.zip
 ```
+*(Das Skript schiebt alle Bilder in die Ordner `dataset/cats` und `dataset/dogs`. Unser eigener Daten-Loader mischt die Bilder danach ohnehin wieder komplett neu für Training und Test).*
 
 **2. Training starten:**
 Das Hauptskript lädt den Datensatz, initialisiert das neuronale Netz und startet das Training.
