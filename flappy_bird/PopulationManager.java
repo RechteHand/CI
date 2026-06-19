@@ -1,4 +1,4 @@
-package flappy_bird_rl;
+package flappy_bird;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -7,7 +7,7 @@ Dieses Modul ist eine Neuroevolutions-Simulation, in der ein Künstliches Neuron
 Das Projekt benötigt keine zusätzlichen Parameter beim Programmaufruf. 
 
 ```bash
-java flappy_bird_rl.Main
+java flappy_bird.Main
 ```
 
 ## 2. Konfigurationsparameter (Quellcode)
