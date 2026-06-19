@@ -40,7 +40,7 @@ Der Code befindet sich im Ordner `nn_zur_klassifikation` und ist streng in klein
 ## Wie man das Projekt startet
 
 **1. Datensatz herunterladen:**
-Dieses Netz basiert auf dem bekannten "Cats vs Dogs" Datensatz (wir nutzen das offiziell gefilterte Subset von Google/Kaggle mit ca. 3000-4000 Bildern, da es schneller lädt).
+Dieses Netz basiert auf dem bekannten "Cats vs Dogs" Datensatz (wir nutzen das offiziell gefilterte Subset von Google/Kaggle mit ca. 3000-4000 Bildern, da es schneller lädt). Da dieser Datensatz zu groß ist, wird er nicht mit in das Repository gepusht.
 
 Um die Bilder zu laden und korrekt zu strukturieren, führe einfach folgende Befehle in deinem Terminal (im Ordner `cat_vs_dog_classification`) aus:
 
