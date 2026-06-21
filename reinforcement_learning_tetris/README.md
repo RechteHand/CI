@@ -2,9 +2,9 @@
 
 This project contains:
 
-- A reusable Tetris engine in plain C (`src/tetris.c`)
-- A playable ANSI terminal frontend (`bin/play`)
-- A headless RL environment wrapper (`src/rl_env.c`)
+- A reusable Tetris engine (`src/tetris.c`)
+- A ANSI terminal frontend (`bin/play`)
+- A RL environment wrapper (`src/rl_env.c`)
 - A tabular Q-learning trainer with save/load (`bin/train`)
 
 ## Build
