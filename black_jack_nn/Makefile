@@ -1,4 +1,4 @@
-CC := cc
+CC := gcc
 CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2
 CPPFLAGS := -Iinclude
 LDLIBS := -lm
