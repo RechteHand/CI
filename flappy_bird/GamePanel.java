@@ -31,11 +31,11 @@ public class GamePanel extends JPanel {
         
         // Load assets
         try {
-            birdImg = ImageIO.read(new File("flappy_bird_rl/res/bird.png"));
-            pipeImg = ImageIO.read(new File("flappy_bird_rl/res/pipe.png"));
-            bgImg = ImageIO.read(new File("flappy_bird_rl/res/background.png"));
+            birdImg = ImageIO.read(new File("flappy_bird/res/bird.png"));
+            pipeImg = ImageIO.read(new File("flappy_bird/res/pipe.png"));
+            bgImg = ImageIO.read(new File("flappy_bird/res/background.png"));
         } catch (IOException e) {
-            System.err.println("Fehler beim Laden der Grafiken aus flappy_bird_rl/res/");
+            System.err.println("Fehler beim Laden der Grafiken aus flappy_bird/res/");
         }
     }
     

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 /**
  * Repraesentiert eine einzelne beleuchtete Drohne in der Schwarm-Show.
  * Jede Drohne startet am Boden und fliegt per Arrival-Steering-Behavior
- * (nach Craig Reynolds) sanft zu ihrer Zielposition.
+ * sanft zu ihrer Zielposition.
  * Inklusive Kollisionsvermeidung und Signal-Broadcasting bei Blockaden.
  */
 public class Drohne {
